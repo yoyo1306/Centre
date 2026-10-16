@@ -9,6 +9,7 @@ l'ecran principal. Clic droit : menu.
 """
 import configparser
 import ctypes
+from ctypes import wintypes
 import math
 import os
 import re
@@ -17,6 +18,7 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 import tkinter as tk
 from concurrent import futures
 
@@ -32,7 +34,7 @@ CFG_PATH = os.path.join(APPDIR, "centre.ini")
 # Grille 3×3 : aperçus 480×320 réduits d'un facteur 3 (160×106).
 PAD, GAP, COLS = 8, 8, 3
 THUMB_W, THUMB_H = 160, 107
-GRID_Y0 = 42
+GRID_Y0 = 70               # sous la rangée de luminosité
 ROWS = 3
 W = PAD + COLS * THUMB_W + (COLS - 1) * GAP + PAD
 FOOT_Y = GRID_Y0 + ROWS * THUMB_H + (ROWS - 1) * GAP + 8
@@ -45,7 +47,7 @@ def fit_grid(n):
     ROWS = max(1, (max(n, 1) + COLS - 1) // COLS)
     FOOT_Y = GRID_Y0 + ROWS * THUMB_H + max(0, ROWS - 1) * GAP + 8
     H = FOOT_Y + 62
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 PANEL_EXE = "sensor_panel.exe"
 PANEL_PY = "sensor_panel.py"
 PANEL_CFG_NAME = "config.ini"
@@ -449,7 +451,7 @@ drag = {"moving": False, "dx": 0, "dy": 0}   # deplacement via la barre de titre
 
 root = tk.Tk()
 root.title("Centre de controle")
-_icon = os.path.join(APPDIR, "oscilloscope.ico")
+_icon = os.path.join(APPDIR, "ico.ico")
 if os.path.isfile(_icon):
     try:
         root.iconbitmap(_icon)
@@ -464,6 +466,10 @@ cv.pack(fill="both", expand=True)
 
 BTN = {}          # actions du pied : stop / run / quit
 HDR = {}          # puces de la barre : theme_light / theme_dark
+BRIGHT = {}       # niveaux 0..5 de l'écran 480×320
+BRIGHT_LEVELS = (0, 20, 40, 60, 80, 100)
+bright_sel = None
+bright_hold = 0.0
 POS = list(default_pos())
 st = {"dot": None, "text": None, "run": None}
 HOVER = {"row": None, "btn": None}
@@ -515,6 +521,152 @@ def chip(store, key, x1, y1, x2, y2, label, kind="ghost", fg=None, size=8):
     round_rect(x1, y1, x2, y2, 6, fill=fill, outline=ol, width=1)
     return cv.create_text(X((x1 + x2) / 2), X((y1 + y2) / 2), text=label,
                           fill=fg or col, font=fnt(size, True))
+
+
+def _small_monitor(fn):
+    """Appelle fn(dxva2, handle) sur l'écran 480×320. None si absent."""
+    user32 = ctypes.windll.user32
+    dxva2 = ctypes.windll.dxva2
+
+    class RECT(ctypes.Structure):
+        _fields_ = [("left", wintypes.LONG), ("top", wintypes.LONG),
+                    ("right", wintypes.LONG), ("bottom", wintypes.LONG)]
+
+    class PHYSICAL_MONITOR(ctypes.Structure):
+        _fields_ = [("hPhysicalMonitor", wintypes.HANDLE),
+                    ("szPhysicalMonitorDescription", wintypes.WCHAR * 128)]
+
+    found = []
+
+    def cb(hmon, hdc, rect, data):
+        r = rect.contents
+        found.append((hmon, r.right - r.left, r.bottom - r.top))
+        return True
+
+    cb_t = ctypes.WINFUNCTYPE(
+        wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
+        ctypes.POINTER(RECT), wintypes.LPARAM)
+    user32.EnumDisplayMonitors(None, None, cb_t(cb), 0)
+    dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR.argtypes = [
+        wintypes.HMONITOR, ctypes.POINTER(wintypes.DWORD)]
+    dxva2.GetPhysicalMonitorsFromHMONITOR.argtypes = [
+        wintypes.HMONITOR, wintypes.DWORD, ctypes.POINTER(PHYSICAL_MONITOR)]
+    dxva2.DestroyPhysicalMonitors.argtypes = [
+        wintypes.DWORD, ctypes.POINTER(PHYSICAL_MONITOR)]
+    dxva2.GetVCPFeatureAndVCPFeatureReply.argtypes = [
+        wintypes.HANDLE, wintypes.BYTE,
+        ctypes.POINTER(wintypes.DWORD), ctypes.POINTER(wintypes.DWORD),
+        ctypes.POINTER(wintypes.DWORD)]
+    dxva2.GetVCPFeatureAndVCPFeatureReply.restype = wintypes.BOOL
+    dxva2.SetMonitorBrightness.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    dxva2.SetMonitorBrightness.restype = wintypes.BOOL
+    dxva2.SetVCPFeature.argtypes = [
+        wintypes.HANDLE, wintypes.BYTE, wintypes.DWORD]
+    dxva2.SetVCPFeature.restype = wintypes.BOOL
+    for hmon, w, h in found:
+        if (w, h) != (480, 320):
+            continue
+        n = wintypes.DWORD()
+        if not dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, ctypes.byref(n)) or not n.value:
+            return None
+        arr = (PHYSICAL_MONITOR * n.value)()
+        if not dxva2.GetPhysicalMonitorsFromHMONITOR(hmon, n.value, arr):
+            return None
+        try:
+            return fn(dxva2, arr[0].hPhysicalMonitor)
+        finally:
+            dxva2.DestroyPhysicalMonitors(n.value, arr)
+    return None
+
+
+def read_small_brightness():
+    def fn(dxva2, handle):
+        vct = wintypes.DWORD()
+        cur = wintypes.DWORD()
+        mx = wintypes.DWORD()
+        ok = dxva2.GetVCPFeatureAndVCPFeatureReply(
+            handle, 0x10, ctypes.byref(vct), ctypes.byref(cur), ctypes.byref(mx))
+        return cur.value if ok else None
+    return _small_monitor(fn)
+
+
+def apply_small_brightness(percent):
+    def fn(dxva2, handle):
+        if dxva2.SetMonitorBrightness(handle, int(percent)):
+            return True
+        return bool(dxva2.SetVCPFeature(handle, 0x10, int(percent)))
+    return bool(_small_monitor(fn))
+
+
+def bright_geom(i):
+    bw = (W - 2 * PAD - 5 * GAP) // 6
+    x1 = PAD + i * (bw + GAP)
+    return (x1, 40, x1 + bw, 62)
+
+
+def draw_bright():
+    BRIGHT.clear()
+    for i, _pct in enumerate(BRIGHT_LEVELS):
+        x1, y1, x2, y2 = bright_geom(i)
+        on = bright_sel == i
+        chip(BRIGHT, "b%d" % i, x1, y1, x2, y2, str(i),
+             "solid" if on else "ghost",
+             fg=None if on else C["mut"], size=8)
+
+
+def set_bright(i):
+    global bright_sel, bright_hold
+    if not (0 <= i < len(BRIGHT_LEVELS)):
+        return
+    bright_sel = i
+    bright_hold = time.time() + 1.5
+    paint()
+    percent = BRIGHT_LEVELS[i]
+
+    def work():
+        try:
+            ok = apply_small_brightness(percent)
+        except Exception:
+            traceback.print_exc()
+            ok = False
+
+        def done():
+            if not ok:
+                show_flash("luminosité refusée", "warn")
+        try:
+            root.after(0, done)
+        except Exception:
+            pass
+    _exec.submit(work)
+
+
+def follow_bright():
+    """Relit l'écran 480×320 et aligne le bouton sur le niveau physique."""
+    try:
+        if time.time() < bright_hold:
+            pct = None
+        else:
+            pct = read_small_brightness()
+    except Exception:
+        traceback.print_exc()
+        pct = None
+
+    def done():
+        global bright_sel
+        if time.time() >= bright_hold and pct is not None:
+            for i, v in enumerate(BRIGHT_LEVELS):
+                if v == pct and bright_sel != i:
+                    bright_sel = i
+                    paint()
+                    break
+        try:
+            root.after(1500, lambda: _exec.submit(follow_bright))
+        except Exception:
+            pass
+    try:
+        root.after(0, done)
+    except Exception:
+        pass
 
 
 def draw_title():
@@ -686,6 +838,7 @@ def paint():
     cv.delete("all")
     BTN.clear()
     HDR.clear()
+    BRIGHT.clear()
     st["dot"] = st["text"] = st["run"] = None
     hpx = (TITLE_H if mini else H) * SCALE
     cv.configure(bg=C["bg"])
@@ -693,6 +846,7 @@ def paint():
         draw_title()
     else:
         draw_title()
+        draw_bright()
         draw_rows()
         draw_footer()
     cv.create_rectangle(1, 1, X(W) - 1, hpx - 1, outline=C["line"], width=1)
@@ -891,6 +1045,10 @@ def on_press(e):
         return
     if mini:
         return
+    for k, rect in BRIGHT.items():
+        if hit(lx, ly, rect):
+            set_bright(int(k[1:]))
+            return
     i = cell_at(lx, ly)
     if i is not None:
         globals()["SELECTION"] = i
@@ -930,14 +1088,19 @@ def on_motion(e):
                 btn = k
                 break
     else:
-        i = cell_at(lx, ly)
-        if i is not None:
-            row = i
-        else:
-            for k, rect in BTN.items():
-                if hit(lx, ly, rect):
-                    btn = k
-                    break
+        for k, rect in BRIGHT.items():
+            if hit(lx, ly, rect):
+                btn = k
+                break
+        if btn is None:
+            i = cell_at(lx, ly)
+            if i is not None:
+                row = i
+            else:
+                for k, rect in BTN.items():
+                    if hit(lx, ly, rect):
+                        btn = k
+                        break
     if row != HOVER["row"] or btn != HOVER["btn"]:
         HOVER["row"], HOVER["btn"] = row, btn
         paint()
@@ -1176,4 +1339,5 @@ root.protocol("WM_DELETE_WINDOW", on_close)
 build_menu()
 render()
 poll()
+_exec.submit(follow_bright)
 root.mainloop()

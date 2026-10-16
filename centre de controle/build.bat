@@ -23,7 +23,7 @@ rmdir /s /q dist build 2>nul
 del sensor_panel.spec 2>nul
 
 echo [2/3] compile le centre de controle ...
-python -m PyInstaller --noconsole --clean -y --name centre_controle --icon "oscilloscope.ico" centre_controle.py
+python -m PyInstaller --noconsole --clean -y --name centre_controle --icon "ico.ico" centre_controle.py
 if errorlevel 1 goto err
 move /y "dist\centre_controle\centre_controle.exe" "CentreControle.exe" >nul
 move /y "dist\centre_controle\_internal" "_internal" >nul

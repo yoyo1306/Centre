@@ -32,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['oscilloscope.ico'],
+    icon=['ico.ico'],
 )
 coll = COLLECT(
     exe,

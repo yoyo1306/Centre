@@ -13,7 +13,7 @@ Dézipper en gardant les dossiers côte à côte :
 ```
 CentreControle.exe
 _internal\
-oscilloscope.ico
+ico.ico
 sensor_panel.exe
 panel_internal\
 sensor_panel.py
@@ -40,12 +40,31 @@ Avec l’UAC sur « Ne jamais m’avertir », il n’y a pas de fenêtre de conf
 | Arrêter | Arrête le panneau. |
 | Quitter | Ferme le centre. |
 | Clair / Sombre | Change l’apparence du centre. |
+| 0 à 5 | Règle la luminosité de l’écran 480×320. |
+| Options | Ouvre le panneau collé à la fenêtre. Un second clic le ferme. |
 | Flèches | Déplacent la sélection, sans l’appliquer. |
 | Entrée | Appliquer. |
 | Glisser la barre de titre | Déplace la fenêtre. La position est mémorisée dans `centre.ini`. |
 | Clic droit | Verrouiller, recentrer sur l’écran principal, quitter. |
 
 Le changement à chaud écrit la clé dans `theme_cmd.txt`. Le panneau l’applique au tick suivant (au plus une seconde) et supprime le fichier. Appliquer écrit aussi `theme =` dans `config.ini`.
+
+## Luminosité
+
+Les boutons 0 à 5, sous la barre du haut, règlent seulement l’écran 480×320.
+
+| Bouton | Luminosité |
+|---|---|
+| 0 | 0 % |
+| 1 | 20 % |
+| 2 | 40 % |
+| 3 | 60 % |
+| 4 | 80 % |
+| 5 | 100 % |
+
+Le bouton vert est le niveau en cours. Un réglage avec le bouton physique de cet écran met à jour le bouton vert en moins de deux secondes. L’écran principal n’est pas modifié.
+
+Options permet de lancer le panneau à l’ouverture de session Windows. La tâche planifiée s’appelle `SensorPanel`.
 
 ## Thèmes
 
@@ -86,7 +105,7 @@ Les vignettes sont des PNG 480×320 :
 centre de controle\
     centre_controle.py      interface du centre
     CentreControle.exe      exe compilé, à côté de _internal
-    oscilloscope.ico        icône de l’exe et de la fenêtre
+    ico.ico                 icône de l’exe et de la fenêtre
     centre.ini              réglages locaux
     build.bat               recompile les deux exe
     sensor_panel.py         panneau et thèmes
@@ -126,6 +145,6 @@ Prérequis : Python 3.12, puis `pip install pyinstaller` et, pour le panneau, `p
 centre de controle\build.bat
 ```
 
-Le script arrête les deux programmes, recompile le panneau puis le centre, et replace chaque exe à côté de son dossier d’exécution. L’icône du centre est `oscilloscope.ico`.
+Le script arrête les deux programmes, recompile le panneau puis le centre, et replace chaque exe à côté de son dossier d’exécution. L’icône du centre est `ico.ico`.
 
 Les coordonnées souris du centre sont des flottants. Tout index de liste calculé depuis un clic doit passer par `int(...)`. Dans l’exe sans console, une exception Tk n’affiche rien : le clic a l’air de ne rien faire.
