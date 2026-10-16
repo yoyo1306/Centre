@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SensorPanel 480×320 — propositions d'UI</title>
+<style>
+  :root {
+    --label:#1FE01F; --value:#4EC221; --graph:#56DC23;
+    --grid:#008000; --frame:#005E00;
+    --gpu:#4EC221;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:28px 28px 60px;
+    background:#0a0c0a; color:#b9c6b9;
+    font-family:'Segoe UI', system-ui, sans-serif; font-size:14px;
+  }
+  h1 {
+    font-family:'Dash Digital-7', monospace;
+    font-size:34px; font-weight:normal; letter-spacing:2px;
+    color:var(--label); margin:0 0 6px;
+    text-shadow:1px 1px 0 #000;
+  }
+  .intro { max-width:1100px; color:#8fa08f; margin:0 0 26px; line-height:1.55; }
+  .intro b { color:#cfe3cf; }
+  .intro code { background:#141c14; padding:1px 6px; border-radius:4px; color:#7ee87e; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(560px, 1fr)); gap:26px; max-width:1980px; }
+
+  .card { background:#101510; border:1px solid #1e2a1e; border-radius:14px; padding:18px 18px 14px; }
+  .card header { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+  .card h2 { font-family:'Dash Digital-7', monospace; font-weight:normal; font-size:22px; letter-spacing:1px; color:#e6ffe6; margin:0; }
+  .num { font-family:'Dash Digital-7', monospace; font-size:22px; color:#3f6f3f; }
+  .effort { margin-left:auto; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+            border:1px solid #2c442c; border-radius:20px; padding:2px 10px; color:#7fb87f; }
+  .concept { color:#a9bca9; margin:12px 2px 8px; line-height:1.5; }
+  .meta { margin:0; padding:0; list-style:none; font-size:12.5px; line-height:1.6; color:#93a693; }
+  .meta li::before { content:"— "; color:#3f6f3f; }
+  .meta b.plus { color:#7ee87e; } .meta b.minus { color:#e8a07e; } .meta b.tk { color:#9fd0ff; }
+
+  /* ---- panneau à l'échelle 1:1 ---- */
+  .panel {
+    position:relative; width:480px; height:320px; margin:0 auto;
+    background:url('assets/Fond.png') no-repeat 0 0;
+    outline:1px solid #223022; border-radius:3px; overflow:hidden;
+    user-select:none;
+  }
+  .abs { position:absolute; white-space:nowrap; font-family:'Dash Digital-7', 'Segoe UI', monospace; line-height:1; }
+  .panel svg { position:absolute; inset:0; }
+  .sh { text-shadow:1px 1px 0 #000; }
+  .s8 {font-size:8px}  .s9 {font-size:9px}  .s10{font-size:10px} .s11{font-size:11px}
+  .s12{font-size:12px} .s13{font-size:13px} .s14{font-size:14px} .s16{font-size:16px}
+  .s18{font-size:18px} .s20{font-size:20px} .s22{font-size:22px} .s26{font-size:26px}
+  .s30{font-size:30px} .s34{font-size:34px} .s38{font-size:38px} .s42{font-size:42px} .s46{font-size:46px}
+  .cLabel{color:#1FE01F} .cValue{color:#4EC221} .cGraph{color:#56DC23} .cGrid{color:#008000} .cFrame{color:#005E00} .cGpu{color:#4EC221}
+  .center { transform:translateX(-50%); }
+
+  .synth { max-width:1980px; margin-top:34px; background:#101510; border:1px solid #1e2a1e; border-radius:14px; padding:20px 22px; }
+  .synth h2 { font-family:'Dash Digital-7', monospace; font-weight:normal; letter-spacing:1px; color:#e6ffe6; margin:0 0 12px; font-size:22px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th, td { text-align:left; padding:8px 12px; border-bottom:1px solid #1c261c; }
+  th { color:#6f9a6f; font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:1px; }
+  td { color:#a9bca9; }
+  td:first-child { font-family:'Dash Digital-7', monospace; color:#7ee87e; font-size:16px; }
+  .reco { margin-top:16px; padding:14px 16px; border:1px solid #23402a; border-radius:10px; background:#0d1a0f; color:#b9e0b9; line-height:1.6; }
+  .reco b { color:#7ee87e; }
+</style>
+</head>
+<body>
+
+<h1>SensorPanel 480×320 — 6 propositions d'UI</h1>
+<div class="intro">
+  Maquettes à <b>l'échelle 1:1</b> (chaque panneau fait exactement 480×320 px) : ouvre cette page sur ton petit écran
+  pour juger en vrai. Tout utilise ton matériel existant : <code>assets/Fond.png</code>, la police
+  <code>Dash Digital-7</code> et la palette de <code>config.ini</code>
+  (<span style="color:#1FE01F">#1FE01F</span> label,
+  <span style="color:#4EC221">#4EC221</span> valeur,
+  <span style="color:#56DC23">#56DC23</span> courbe,
+  <span style="color:#008000">#008000</span> grille,
+  <span style="color:#005E00">#005E00</span> cadre). Données simulées : CPU 62.3 °C / 48 %, GPU 71.0 °C / 67 %.
+  <b>Les 6 propositions sont réalisables en tkinter Canvas pur</b>, sans nouvelle dépendance.
+</div>
+
+<div class="grid">
+
+  <!-- 01 -->
+  <section class="card">
+    <header><span class="num">01</span><h2>Héritage AIDA+</h2><span class="effort">Effort : S</span></header>
+    <div class="panel" id="p1"></div>
+    <p class="concept">Le layout actuel, raffiné : on garde la structure exacte (bloc CPU puis bloc GPU) mais on ajoute
+    une grille discrète, l'aire sous la courbe (hachures), un point « live » au bout, et l'échelle 0-100 à droite.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : create_line, create_polygon (stipple), create_text — quasi copier-coller de l'existant.</li>
+      <li><b class="plus">+</b> Fidèle au thème AIDA, rien n'est perdu, migration immédiate.</li>
+      <li><b class="minus">−</b> Deux courbes courtes (48 pts ≈ 230 px) au lieu d'une grande.</li>
+    </ul>
+  </section>
+
+  <!-- 02 -->
+  <section class="card">
+    <header><span class="num">02</span><h2>HUD — grands chiffres</h2><span class="effort">Effort : S</span></header>
+    <div class="panel" id="p2"></div>
+    <p class="concept">Écran partagé en deux : CPU à gauche, GPU à droite. Température en énorme au centre,
+    barre d'utilisation, et sparkline 48 s en bas. Lisible du canapé.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : create_text, create_rectangle + coords(), create_line (sparkline).</li>
+      <li><b class="plus">+</b> Lisibilité maximale à distance ; valeurs + tendance côte à côte.</li>
+      <li><b class="minus">−</b> Historique réduit (sparkline ~200×90 px).</li>
+    </ul>
+  </section>
+
+  <!-- 03 -->
+  <section class="card">
+    <header><span class="num">03</span><h2>Anneaux</h2><span class="effort">Effort : M</span></header>
+    <div class="panel" id="p3"></div>
+    <p class="concept">Deux jauges circulaires : l'arc montre l'utilisation (0-100 %), le centre la température.
+    En bas, deux sparklines gardent le pouls temporel.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : create_arc(style='arc', width=9, extent=…) — natif, très propre.</li>
+      <li><b class="plus">+</b> Compact, esthétique « cockpit », l'œil lit la charge sans chiffres.</li>
+      <li><b class="minus">−</b> Moins de précision temporelle ; % lu au remplissage, il faut la valeur chiffrée dessous.</li>
+    </ul>
+  </section>
+
+  <!-- 04 -->
+  <section class="card">
+    <header><span class="num">04</span><h2>Tuiles 2×2</h2><span class="effort">Effort : S</span></header>
+    <div class="panel" id="p4"></div>
+    <p class="concept">Quatre tuiles cadrées : temp CPU, charge CPU, temp GPU, charge GPU. Chaque tuile a sa
+    sparkline. Structure ultra-rangée, tout est à une position fixe.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : create_rectangle (cadres), create_text, create_line ×4 (sparklines).</li>
+      <li><b class="plus">+</b> Équilibré et stable : 4 zones au lieu de 2 ; histogramme facile à ajouter plus tard.</li>
+      <li><b class="minus">−</b> Sparklines petites ; nécessite d'historiser aussi les températures (deque en plus, 3 lignes).</li>
+    </ul>
+  </section>
+
+  <!-- 05 -->
+  <section class="card">
+    <header><span class="num">05</span><h2>Colonnes segmentées</h2><span class="effort">Effort : M</span></header>
+    <div class="panel" id="p5"></div>
+    <p class="concept">Style matériel hi-fi : chaque moitié a son grand chiffre, sa colonne d'usage à segments
+    (comme un VU-mètre) et sa courbe historique en bas. L'usage se lit d'un seul regard.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : ~26 create_rectangle par colonne + itemconfig(fill) au tick — trivial à animer.</li>
+      <li><b class="plus">+</b> Instantané très direct ; le segment partiel montre la vraie valeur.</li>
+      <li><b class="minus">−</b> Charge visuelle plus forte ; segments à ajuster selon ton goût.</li>
+    </ul>
+  </section>
+
+  <!-- 06 -->
+  <section class="card">
+    <header><span class="num">06</span><h2>Oscilloscope</h2><span class="effort">Effort : S</span></header>
+    <div class="panel" id="p6"></div>
+    <p class="concept">Une seule grande courbe unique : les deux tracés CPU/GPU superposés, comparables en direct
+    sur toute la largeur. Sous le graph, bandeau de lecture avec les quatre valeurs clés.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : 2 create_line (le code actuel, en 2× plus large) + create_text pour le bandeau.</li>
+      <li><b class="plus">+</b> Grand historique lisible (48 s sur 436 px), comparaison CPU/GPU immédiate.</li>
+      <li><b class="minus">−</b> Chiffres plus petits ; les deux verts doivent être bien distincts (courbe pleine vs tirets).</li>
+    </ul>
+  </section>
+
+</div>
+
+<!-- Nouvelle section dans le fichier, après le div.grid -->
+
+<div class="grid" style="margin-top:26px">
+
+  <!-- 07 -->
+  <section class="card">
+    <header><span class="num">07</span><h2>Double peak</h2><span class="effort">Effort : S</span></header>
+    <div class="panel" id="p7"></div>
+    <p class="concept">Hybride du 01 et du 06 : les deux courbes AIDA restent empilées, mais une fine ligne
+    d'union centrale affiche les températures et charges courantes, et les headers accueillent des barres
+    de charge horizontales fines.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : identique à l'actuel + 2 create_rectangle (barres).</li>
+      <li><b class="plus">+</b> Garde la logique 1-sujet-par-graph tout en montrant l'usage instantané sans texte.</li>
+      <li><b class="minus">−</b> Chaque courbe reste limitée à ~230 px de large.</li>
+    </ul>
+  </section>
+
+  <!-- 08 -->
+  <section class="card">
+    <header><span class="num">08</span><h2>Frise thermique (timeline)</h2><span class="effort">Effort : M</span></header>
+    <div class="panel" id="p8"></div>
+    <p class="concept">Barres verticales d'historique, type daytime-timeline : chaque barre = 1 s, couleur
+    normalisée sur la température. Deux pistes empilées + valeurs en ligne de lecture.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : 48 create_rectangle par piste (fill selon temp) — 96 items, ok à 1 Hz.</li>
+      <li><b class="plus">+</b> Montre l'intensité thermique par la hauteur ET la couleur ; très compact.</li>
+      <li><b class="minus">−</b> Moins lisible que la ligne pour de petites variations.</li>
+    </ul>
+  </section>
+
+  <!-- 09 -->
+  <section class="card">
+    <header><span class="num">09</span><h2>Compact splitscreen</h2><span class="effort">Effort : S</span></header>
+    <div class="panel" id="p9"></div>
+    <p class="concept">Coupé verticalement : à gauche la courbe CPU avec chiffres empilés, à droite la courbe GPU.
+    Chaque moitié a son échelle propre — idéal si CPU et GPU n'ont pas les mêmes plages.</p>
+    <ul class="meta">
+      <li><b class="tk">tkinter</b> : 2 create_line verticales larges + create_text — même code, coordonnées coupées en 2.</li>
+      <li><b class="plus">+</b> Indépendance totale par moitié ; aucune superposition de couleurs.</li>
+      <li><b class="minus">−</b> Moins d'ampleur visuelle ; largeur de courbe réduite de moitié.</li>
+    </ul>
+  </section>
+
+</div>
+
+<div class="synth">
+  <h2>Synthèse</h2>
+  <table>
+    <tr><th>#</th><th>Style</th><th>Effort</th><th>Force</th><th>Limite</th></tr>
+    <tr><td>01</td><td>Héritage AIDA+</td><td>S</td><td>Fidélité totale au thème actuel</td><td>Courbes petites</td></tr>
+    <tr><td>02</td><td>HUD grands chiffres</td><td>S</td><td>Lisibilité à distance</td><td>Peu d'historique</td></tr>
+    <tr><td>03</td><td>Anneaux</td><td>M</td><td>Cockpit compact</td><td>Moins quantitatif</td></tr>
+    <tr><td>04</td><td>Tuiles 2×2</td><td>S</td><td>Équilibré, extensible</td><td>Sparklines réduites</td></tr>
+    <tr><td>05</td><td>Colonnes segmentées</td><td>M</td><td>Usage lisible instantanément</td><td>Chargé</td></tr>
+    <tr><td>06</td><td>Oscilloscope</td><td>S</td><td>Grand historique, comparaison directe</td><td>Chiffres plus petits</td></tr>
+    <tr><td>07</td><td>Double peak</td><td>S</td><td>Layout AIDA + barres instantanées</td><td>Courbes petites</td></tr>
+    <tr><td>08</td><td>Frise thermique</td><td>M</td><td>Intensité couleur + hauteur</td><td>Bruit visuel possible</td></tr>
+    <tr><td>09</td><td>Compact splitscreen</td><td>S</td><td>Deux échelles indépendantes</td><td>Moins d'ampleur</td></tr>
+  </table>
+  <div class="reco">
+    <b>Recommandation</b> : <b>06 Oscilloscope</b> pour la lecture continue — c'est le meilleur compromis
+    « grande tendance + grands chiffres ». Si tu préfères garder l'ADN AIDA ligne-par-ligne, le
+    <b>07 Double peak</b> est l'évolution la plus directe (deux créneaux, zéro restructuration),
+    et le <b>02 HUD</b> est le roi de la lisibilité à distance. Un mix 06 + 04 est facile :
+    bandeau tuiles en bas d'un oscilloscope agrandi.
+  </div>
+</div>
+
+<script>
+/* ================= données simulées (déterministes) ================= */
+var CPU_TEMP = "62.3", GPU_TEMP = "71.0", CPU_USE = 48, GPU_USE = 67;
+var seed = 987654321;
+function rnd(){ seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+function makeData(n, base, amp, noise, endAt, phase){
+  var out = [], i, t, v;
+  for (i = 0; i < n; i++){
+    t = i / (n - 1);
+    v = base
+      + amp * Math.sin((t * 1.7 + phase) * Math.PI * 2)
+      + amp * 0.6 * Math.sin((t * 4.3 + phase * 2) * Math.PI * 2)
+      + (rnd() - 0.5) * noise;
+    out.push(v);
+  }
+  var delta = endAt - out[n - 1];
+  for (i = 0; i < n; i++){
+    out[i] = Math.max(2, Math.min(98, out[i] + delta * (i / (n - 1))));
+  }
+  return out;
+}
+var N = 48;
+var CPU_DATA  = makeData(N, 44, 22, 16, CPU_USE, 0.10);
+var GPU_DATA  = makeData(N, 55, 14, 12, GPU_USE, 0.45);
+var CPUT_DATA = makeData(N, 60, 5, 2.4, parseFloat(CPU_TEMP), 0.30);
+var GPUT_DATA = makeData(N, 70, 4, 2.2, parseFloat(GPU_TEMP), 0.60);
+var TW_TEMP   = makeData(N, 58, 6, 3.0, parseFloat(CPU_TEMP), 0.75);
+
+/* ================= helpers SVG ================= */
+function linePts(data, x, y, w, h, vmax){
+  vmax = vmax || 100;
+  var n = data.length, pts = [];
+  for (var i = 0; i < n; i++){
+    pts.push((x + i * (w / (n - 1))).toFixed(1) + ',' + (y + h - (data[i] / vmax) * h).toFixed(1));
+  }
+  return pts.join(' ');
+}
+function polyTag(data, x, y, w, h, color, sw, vmax){
+  return '<polyline points="' + linePts(data, x, y, w, h, vmax) + '" fill="none" stroke="' + color +
+         '" stroke-width="' + sw + '" stroke-linejoin="round" stroke-linecap="round"/>';
+}
+function polyTagDash(data, x, y, w, h, color, sw, dash, vmax){
+  return '<polyline points="' + linePts(data, x, y, w, h, vmax) + '" fill="none" stroke="' + color +
+         '" stroke-width="' + sw + '" stroke-dasharray="' + dash + '" stroke-linejoin="round" stroke-linecap="round"/>';
+}
+function areaTag(data, x, y, w, h, color, op, vmax){
+  return '<polygon points="' + linePts(data, x, y, w, h, vmax) + ' ' + (x + w) + ',' + (y + h) + ' ' + x + ',' + (y + h) +
+         '" fill="' + color + '" opacity="' + (op === undefined ? 0.45 : op) + '"/>';
+}
+function hgrid(x, y, w, h, n, color, op){
+  var s = '', i, yy;
+  for (i = 1; i <= n; i++){
+    yy = (y + h * i / (n + 1)).toFixed(1);
+    s += '<line x1="' + x + '" y1="' + yy + '" x2="' + (x + w) + '" y2="' + yy + '" stroke="' + color +
+         '" stroke-width="1" opacity="' + (op === undefined ? 0.55 : op) + '"/>';
+  }
+  return s;
+}
+function tspan(style, cls, txt){ return '<div class="abs ' + cls + '" style="' + style + '">' + txt + '</div>'; }
+function tempHTML(t){ return t + '<span style="font-size:0.55em"> °C</span>'; }
+
+/* ================= 01 · Héritage AIDA+ ================= */
+function buildP1(){
+  var gx = 6, gw = 450, gh = 108, y1 = 44, y2 = 208;
+  var svg = '<svg viewBox="0 0 480 320">';
+  svg += hgrid(gx, y1, gw, gh, 3, '#008000', 0.5);
+  svg += hgrid(gx, y2, gw, gh, 3, '#008000', 0.5);
+  svg += areaTag(CPU_DATA, gx, y1, gw, gh, '#56DC23', 0.28);
+  svg += areaTag(GPU_DATA, gx, y2, gw, gh, '#4EC221', 0.28);
+  svg += polyTag(CPU_DATA, gx, y1, gw, gh, '#56DC23', 2.6);
+  svg += polyTag(GPU_DATA, gx, y2, gw, gh, '#4EC221', 2.6);
+  svg += '<circle cx="' + (gx + gw) + '" cy="' + (y1 + gh - CPU_USE / 100 * gh).toFixed(1) + '" r="3.2" fill="#56DC23"/>';
+  svg += '<circle cx="' + (gx + gw) + '" cy="' + (y2 + gh - GPU_USE / 100 * gh).toFixed(1) + '" r="3.2" fill="#4EC221"/>';
+  svg += '<line x1="6" y1="168" x2="474" y2="168" stroke="#005E00" stroke-width="1"/>';
+  svg += '</svg>';
+  var t = '';
+  t += tspan('left:10px;top:10px', 's14 cLabel sh', 'RYZEN 5 7600X 6-CORE');
+  t += tspan('right:10px;top:6px', 's26 cValue sh', tempHTML(CPU_TEMP));
+  t += tspan('left:6px;top:30px', 's11 cGrid sh', 'UTILISATION CPU — 48 %');
+  t += tspan('left:456px;top:46px', 's9 cGrid', '100');
+  t += tspan('left:456px;top:96px', 's9 cGrid', '50');
+  t += tspan('left:460px;top:144px', 's9 cGrid', '0');
+  t += tspan('left:10px;top:174px', 's14 cLabel sh', 'RTX 5080');
+  t += tspan('right:10px;top:170px', 's26 cValue sh', tempHTML(GPU_TEMP));
+  t += tspan('left:6px;top:194px', 's11 cGrid sh', 'UTILISATION GPU — 67 %');
+  t += tspan('left:456px;top:210px', 's9 cGrid', '100');
+  t += tspan('left:456px;top:260px', 's9 cGrid', '50');
+  t += tspan('left:460px;top:308px', 's9 cGrid', '0');
+  return svg + t;
+}
+
+/* ================= 02 · HUD grands chiffres ================= */
+function buildP2(){
+  function half(ox, name, temp, use, data, color){
+    var cx = ox + 120;
+    var t = '';
+    t += tspan('left:' + cx + 'px;top:12px;transform:translateX(-50%)', 's13 cLabel sh', name);
+    t += tspan('left:' + cx + 'px;top:38px;transform:translateX(-50%)', 's42 cValue sh', tempHTML(temp));
+    t += tspan('left:' + (ox + 24) + 'px;top:118px', 's10 cGrid', 'CHARGE');
+    t += tspan('left:' + (ox + 216) + 'px;top:112px;transform:translateX(-100%)', 's22 cLabel sh', use + ' %');
+    // barre horizontale
+    var bx = ox + 24, bw = 192, by = 152;
+    var svg = '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="9" fill="none" stroke="#005E00"/>' +
+              '<rect x="' + (bx + 1) + '" y="' + (by + 1) + '" width="' + ((bw - 2) * use / 100).toFixed(1) + '" height="7" fill="' + color + '"/>';
+    // sparkline
+    var sx = ox + 24, sw = 192, sy = 188, sh = 96;
+    svg += hgrid(sx, sy, sw, sh, 2, '#008000', 0.45);
+    svg += areaTag(data, sx, sy, sw, sh, color, 0.25);
+    svg += polyTag(data, sx, sy, sw, sh, color, 2.2);
+    svg += '<circle cx="' + (sx + sw) + '" cy="' + (sy + sh - use / 100 * sh).toFixed(1) + '" r="2.8" fill="' + color + '"/>';
+    return { txt: t, svg: svg };
+  }
+  var L = half(0, 'RYZEN 5 7600X', CPU_TEMP, CPU_USE, CPU_DATA, '#56DC23');
+  var R = half(240, 'RTX 5080', GPU_TEMP, GPU_USE, GPU_DATA, '#4EC221');
+  var svg = '<svg viewBox="0 0 480 320">' + L.svg + R.svg +
+            '<line x1="240" y1="8" x2="240" y2="312" stroke="#005E00" stroke-width="1"/>' +
+            '</svg>';
+  var t = L.txt + R.txt;
+  t += tspan('left:24px;top:296px', 's9 cGrid', 'HISTORIQUE 48 S');
+  t += tspan('left:264px;top:296px', 's9 cGrid', 'HISTORIQUE 48 S');
+  return svg + t;
+}
+
+/* ================= 03 · Anneaux ================= */
+function buildP3(){
+  function polar(cx, cy, r, deg){
+    var rad = (deg - 90) * Math.PI / 180;
+    return [(cx + r * Math.cos(rad)).toFixed(2), (cy + r * Math.sin(rad)).toFixed(2)];
+  }
+  function arc(cx, cy, r, deg0, deg1, color, sw){
+    var p0 = polar(cx, cy, r, deg0), p1 = polar(cx, cy, r, deg1);
+    var large = (deg1 - deg0) > 180 ? 1 : 0;
+    return '<path d="M ' + p0[0] + ' ' + p0[1] + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + p1[0] + ' ' + p1[1] +
+           '" fill="none" stroke="' + color + '" stroke-width="' + sw + '" stroke-linecap="round"/>';
+  }
+  function gauge(cx, cy, r, use, color){
+    var s = arc(cx, cy, r, -120, 120, '#005E00', 9);
+    s += arc(cx, cy, r, -120, -120 + 240 * use / 100, color, 9);
+    //     ticks majeurs aux 0/25/50/75/100 %
+    for (var k = 0; k <= 4; k++){
+      var a = -120 + 240 * k / 4;
+      var p0 = polar(cx, cy, r + 8, a), p1 = polar(cx, cy, r + 13, a);
+      s += '<line x1="' + p0[0] + '" y1="' + p0[1] + '" x2="' + p1[0] + '" y2="' + p1[1] +
+           '" stroke="#008000" stroke-width="2"/>';
+    }
+    return s;
+  }
+  var svg = '<svg viewBox="0 0 480 320">';
+  svg += gauge(120, 102, 72, CPU_USE, '#56DC23');
+  svg += gauge(360, 102, 72, GPU_USE, '#4EC221');
+  //     sparklines bas
+  svg += hgrid(16, 238, 208, 62, 2, '#008000', 0.45);
+  svg += hgrid(256, 238, 208, 62, 2, '#008000', 0.45);
+  svg += areaTag(CPU_DATA, 16, 238, 208, 62, '#56DC23', 0.25);
+  svg += areaTag(GPU_DATA, 256, 238, 208, 62, '#4EC221', 0.25);
+  svg += polyTag(CPU_DATA, 16, 238, 208, 62, '#56DC23', 2);
+  svg += polyTag(GPU_DATA, 256, 238, 208, 62, '#4EC221', 2);
+  svg += '</svg>';
+  var t = '';
+  t += tspan('left:120px;top:10px;transform:translateX(-50%)', 's12 cLabel sh', 'RYZEN 5 7600X');
+  t += tspan('left:360px;top:10px;transform:translateX(-50%)', 's12 cLabel sh', 'RTX 5080');
+  t += tspan('left:120px;top:74px;transform:translateX(-50%)', 's30 cValue sh', tempHTML(CPU_TEMP));
+  t += tspan('left:360px;top:74px;transform:translateX(-50%)', 's30 cValue sh', tempHTML(GPU_TEMP));
+  t += tspan('left:120px;top:116px;transform:translateX(-50%)', 's14 cLabel sh', 'CPU · 48 %');
+  t += tspan('left:360px;top:116px;transform:translateX(-50%)', 's14 cLabel sh', 'GPU · 67 %');
+  t += tspan('left:16px;top:226px', 's9 cGrid', 'HISTORIQUE CPU — 48 S');
+  t += tspan('left:256px;top:226px', 's9 cGrid', 'HISTORIQUE GPU — 48 S');
+  return svg + t;
+}
+
+/* ================= 04 · Tuiles 2×2 ================= */
+function buildP4(){
+  function tile(x, y, w, h, label, value, unit, sub, data, color){
+    var svg = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="#04140a" fill-opacity="0.25" stroke="#005E00"/>';
+    svg += '<line x1="' + (x + 14) + '" y1="' + (y + h - 52) + '" x2="' + (x + w - 14) + '" y2="' + (y + h - 52) + '" stroke="#008000" stroke-width="1" opacity="0.45"/>';
+    svg += areaTag(data, x + 14, y + h - 46, w - 28, 36, color, 0.22);
+    svg += polyTag(data, x + 14, y + h - 46, w - 28, 36, color, 1.8);
+    var t = tspan('left:' + (x + 14) + 'px;top:' + (y + 12) + 'px', 's11 cGrid sh', label);
+    t += tspan('left:' + (x + 14) + 'px;top:' + (y + 36) + 'px', 's38 cValue sh',
+               value + '<span style="font-size:0.5em"> ' + unit + '</span>');
+    t += tspan('left:' + (x + 14) + 'px;top:' + (y + 94) + 'px', 's10 cLabel sh', sub);
+    return { svg: svg, txt: t };
+  }
+  var a = tile(4, 4, 232, 152, 'CPU · TEMPÉRATURE', CPU_TEMP, '°C', 'PACKAGE · LIVE', CPUT_DATA, '#56DC23');
+  var b = tile(244, 4, 232, 152, 'CPU · CHARGE', String(CPU_USE), '%', '48 S D HISTORIQUE', CPU_DATA, '#56DC23');
+  var c = tile(4, 164, 232, 152, 'GPU · TEMPÉRATURE', GPU_TEMP, '°C', 'CORE · LIVE', GPUT_DATA, '#4EC221');
+  var d = tile(244, 164, 232, 152, 'GPU · CHARGE', String(GPU_USE), '%', '48 S D HISTORIQUE', GPU_DATA, '#4EC221');
+  return '<svg viewBox="0 0 480 320">' + a.svg + b.svg + c.svg + d.svg + '</svg>' + a.txt + b.txt + c.txt + d.txt;
+}
+
+/* ================= 05 · Colonnes segmentées ================= */
+function buildP5(){
+  function col(ox, name, temp, use, data, color, tdata){
+    var t = '';
+    t += tspan('left:' + (ox + 14) + 'px;top:12px', 's12 cLabel sh', name);
+    t += tspan('left:' + (ox + 14) + 'px;top:34px', 's28 cValue sh', tempHTML(temp));
+    t += tspan('left:' + (ox + 14) + 'px;top:78px', 's34 cGraph sh', String(use) + '<span style="font-size:0.55em"> %</span>');
+    t += tspan('left:' + (ox + 14) + 'px;top:122px', 's9 cGrid sh', 'UTILISATION');
+    t += tspan('left:' + (ox + 14) + 'px;top:288px', 's9 cGrid', 'HISTORIQUE 48 S');
+    var svg = '';
+    //         colonne de segments (13 segments)
+    var segs = 14, sh2 = 15, gap = 3, colTop = 38, colH = segs * sh2 + (segs - 1) * gap, cx = ox + 192, cw = 30;
+    var level = segs * use / 100;
+    for (var i = 0; i < segs; i++){
+      var op = Math.max(0, Math.min(1, level - i));
+      var yy = colTop + (segs - 1 - i) * (sh2 + gap);
+      svg += '<rect x="' + cx + '" y="' + yy + '" width="' + cw + '" height="' + sh2 + '" fill="' + color + '" fill-opacity="' + op.toFixed(2) + '" stroke="#005E00"/>';
+    }
+    //         sparkline
+    var sx = ox + 14, sw = 158, sy = 170, sh = 108;
+    svg += hgrid(sx, sy, sw, sh, 2, '#008000', 0.45);
+    svg += areaTag(data, sx, sy, sw, sh, color, 0.22);
+    svg += polyTag(data, sx, sy, sw, sh, color, 2);
+    return { txt: t, svg: svg };
+  }
+  var L = col(0, 'RYZEN 5 7600X', CPU_TEMP, CPU_USE, CPU_DATA, '#56DC23', CPUT_DATA);
+  var R = col(240, 'RTX 5080', GPU_TEMP, GPU_USE, GPU_DATA, '#4EC221', GPUT_DATA);
+  return '<svg viewBox="0 0 480 320">' + L.svg + R.svg +
+         '<line x1="240" y1="10" x2="240" y2="310" stroke="#005E00" stroke-width="1"/></svg>' + L.txt + R.txt;
+}
+
+/* ================= 06 · Oscilloscope ================= */
+function buildP6(){
+  var gx = 38, gy = 12, gw = 434, gh = 168;
+  var svg = '<svg viewBox="0 0 480 320">';
+  svg += hgrid(gx, gy, gw, gh, 3, '#008000', 0.5);
+  //         grilles verticales fines (5)
+  for (var k = 1; k <= 5; k++){
+    var vx = (gx + gw * k / 6).toFixed(1);
+    svg += '<line x1="' + vx + '" y1="' + gy + '" x2="' + vx + '" y2="' + (gy + gh) + '" stroke="#008000" stroke-width="1" opacity="0.35"/>';
+  }
+  svg += areaTag(CPU_DATA, gx, gy, gw, gh, '#56DC23', 0.16);
+  svg += polyTag(CPU_DATA, gx, gy, gw, gh, '#56DC23', 2.6);
+  svg += polyTagDash(GPU_DATA, gx, gy, gw, gh, '#4EC221', 1.7, '5 4');
+  svg += '<circle cx="' + (gx + gw) + '" cy="' + (gy + gh - CPU_USE / 100 * gh).toFixed(1) + '" r="3.2" fill="#56DC23"/>';
+  svg += '<circle cx="' + (gx + gw) + '" cy="' + (gy + gh - GPU_USE / 100 * gh).toFixed(1) + '" r="3.2" fill="#4EC221"/>';
+  svg += '<line x1="12" y1="192" x2="468" y2="192" stroke="#005E00" stroke-width="1"/>';
+  //         barres de lecture
+  svg += '<rect x="16" y="284" width="200" height="7" fill="none" stroke="#005E00"/>';
+  svg += '<rect x="17" y="285" width="' + (198 * CPU_USE / 100).toFixed(1) + '" height="5" fill="#56DC23"/>';
+  svg += '<rect x="264" y="284" width="200" height="7" fill="none" stroke="#005E00"/>';
+  svg += '<rect x="265" y="285" width="' + (198 * GPU_USE / 100).toFixed(1) + '" height="5" fill="#4EC221"/>';
+  svg += '</svg>';
+  var t = '';
+  t += tspan('left:8px;top:6px', 's9 cGrid', '100');
+  t += tspan('left:12px;top:91px', 's9 cGrid', '50');
+  t += tspan('left:16px;top:174px', 's9 cGrid', '0');
+  t += tspan('right:12px;top:6px', 's10 cGrid', '<span style="color:#56DC23">── CPU</span> <span style="color:#4EC221">╌╌ GPU</span>');
+  t += tspan('left:16px;top:204px', 's32 cValue sh', tempHTML(CPU_TEMP));
+  t += tspan('left:16px;top:250px', 's12 cLabel sh', 'CPU · CHARGE ' + CPU_USE + ' %');
+  t += tspan('left:264px;top:204px', 's32 cValue sh', tempHTML(GPU_TEMP));
+  t += tspan('left:264px;top:250px', 's12 cLabel sh', 'GPU · CHARGE ' + GPU_USE + ' %');
+  t += tspan('right:12px;top:302px', 's9 cGrid', 'MAJ 1 S');
+  t += tspan('left:16px;top:296px', 's9 cGrid', 'RYZEN 5 7600X');
+  t += tspan('left:264px;top:296px', 's9 cGrid', 'RTX 5080');
+  return svg + t;
+}
+
+/* ================= 07 · Double peak ================= */
+function buildP7(){
+  var gx = 6, gw = 466, gh = 104, y1 = 52, y2 = 212;
+  var svg = '<svg viewBox="0 0 480 320">';
+  svg += hgrid(gx, y1, gw, gh, 3, '#008000', 0.45);
+  svg += hgrid(gx, y2, gw, gh, 3, '#008000', 0.45);
+  svg += areaTag(CPU_DATA, gx, y1, gw, gh, '#56DC23', 0.22);
+  svg += areaTag(GPU_DATA, gx, y2, gw, gh, '#4EC221', 0.22);
+  svg += polyTag(CPU_DATA, gx, y1, gw, gh, '#56DC23', 2.4);
+  svg += polyTag(GPU_DATA, gx, y2, gw, gh, '#4EC221', 2.4);
+  //         barres de charge dans les headers
+  svg += '<rect x="286" y="12" width="120" height="7" fill="none" stroke="#005E00"/>';
+  svg += '<rect x="287" y="13" width="' + (118 * CPU_USE / 100).toFixed(1) + '" height="5" fill="#56DC23"/>';
+  svg += '<rect x="286" y="172" width="120" height="7" fill="none" stroke="#005E00"/>';
+  svg += '<rect x="287" y="173" width="' + (118 * GPU_USE / 100).toFixed(1) + '" height="5" fill="#4EC221"/>';
+  //         ligne d'union centrale
+  svg += '<line x1="6" y1="164" x2="474" y2="164" stroke="#005E00" stroke-width="1"/>';
+  svg += '<circle cx="240" cy="164" r="3" fill="#56DC23"/>';
+  svg += '<circle cx="244" cy="164" r="3" fill="#4EC221"/>';
+  svg += '</svg>';
+  var t = '';
+  t += tspan('left:10px;top:10px', 's14 cLabel sh', 'RYZEN 5 7600X 6-CORE');
+  t += tspan('left:10px;top:34px', 's10 cGrid sh', 'UTILISATION 48 %');
+  t += tspan('right:10px;top:4px', 's24 cValue sh', tempHTML(CPU_TEMP));
+  t += tspan('left:10px;top:170px', 's14 cLabel sh', 'RTX 5080');
+  t += tspan('left:10px;top:194px', 's10 cGrid sh', 'UTILISATION 67 %');
+  t += tspan('right:10px;top:164px', 's24 cValue sh', tempHTML(GPU_TEMP));
+  return svg + t;
+}
+
+/* ================= 08 · Frise thermique ================= */
+function buildP8(){
+  function track(oy, name, temp, use, tdata, color){
+    var n = N, x0 = 118, w = 348, bw = w / n, y = oy + 30, h = 64;
+    var svg = '<line x1="' + x0 + '" y1="' + (y + h) + '" x2="' + (x0 + w) + '" y2="' + (y + h) + '" stroke="#005E00"/>';
+    for (var i = 0; i < n; i++){
+      var v = tdata[i];
+      var bh = Math.max(4, (v - 40) / 45 * h);
+      var op = 0.35 + 0.65 * Math.min(1, Math.max(0, (v - 45) / 35));
+      svg += '<rect x="' + (x0 + i * bw + 1).toFixed(1) + '" y="' + (y + h - bh).toFixed(1) +
+             '" width="' + (bw - 2).toFixed(1) + '" height="' + bh.toFixed(1) +
+             '" fill="' + color + '" fill-opacity="' + op.toFixed(2) + '"/>';
+    }
+    var t = tspan('left:12px;top:' + (oy + 26) + 'px', 's12 cLabel sh', name);
+    t += tspan('left:12px;top:' + (oy + 48) + 'px', 's28 cValue sh', tempHTML(temp));
+    t += tspan('left:12px;top:' + (oy + 84) + 'px', 's11 cGraph sh', use + ' % CHARGE');
+    return { svg: svg, txt: t, y: y, h: h };
+  }
+  var A = track(6, 'RYZEN 5 7600X', CPU_TEMP, CPU_USE, TW_TEMP, '#56DC23');
+  var B = track(160, 'RTX 5080', GPU_TEMP, GPU_USE, GPUT_DATA, '#4EC221');
+  var svg = '<svg viewBox="0 0 480 320">' + A.svg + B.svg + hgrid(118, A.y, 348, A.h, 2, '#008000', 0.45) + hgrid(118, B.y, 348, B.h, 2, '#008000', 0.45) + '</svg>';
+  var t = A.txt + B.txt;
+  t += tspan('left:118px;top:106px', 's9 cGrid', '−48 S');
+  t += tspan('left:466px;top:106px;transform:translateX(-100%)', 's9 cGrid', 'NOW');
+  t += tspan('left:118px;top:260px', 's9 cGrid', '−48 S');
+  t += tspan('left:466px;top:260px;transform:translateX(-100%)', 's9 cGrid', 'NOW');
+  return svg + t;
+}
+
+/* ================= 09 · Compact splitscreen ================= */
+function buildP9(){
+  function half(ox, name, temp, use, data, color){
+    var sx = ox + 12, sw = 212, sy = 150, sh = 150;
+    var svg = hgrid(sx, sy, sw, sh, 3, '#008000', 0.45);
+    svg += areaTag(data, sx, sy, sw, sh, color, 0.22);
+    svg += polyTag(data, sx, sy, sw, sh, color, 2.4);
+    svg += '<circle cx="' + (sx + sw) + '" cy="' + (sy + sh - use / 100 * sh).toFixed(1) + '" r="3" fill="' + color + '"/>';
+    var t = '';
+    t += tspan('left:' + (ox + 12) + 'px;top:10px', 's12 cLabel sh', name);
+    t += tspan('left:' + (ox + 12) + 'px;top:34px', 's30 cValue sh', tempHTML(temp));
+    t += tspan('left:' + (ox + 12) + 'px;top:92px', 's24 cGraph sh', String(use) + '<span style="font-size:0.55em"> %</span>');
+    t += tspan('left:' + (ox + 12) + 'px;top:132px', 's9 cGrid', 'UTILISATION · 48 S');
+    return { svg: svg, txt: t };
+  }
+  var L = half(0, 'RYZEN 5 7600X', CPU_TEMP, CPU_USE, CPU_DATA, '#56DC23');
+  var R = half(240, 'RTX 5080', GPU_TEMP, GPU_USE, GPU_DATA, '#4EC221');
+  var svg = '<svg viewBox="0 0 480 320">' + L.svg + R.svg +
+            '<line x1="240" y1="8" x2="240" y2="312" stroke="#005E00" stroke-width="1"/></svg>';
+  return svg + L.txt + R.txt;
+}
+
+/* ================= injection ================= */
+var builders = { p1: buildP1, p2: buildP2, p3: buildP3, p4: buildP4, p5: buildP5,
+                 p6: buildP6, p7: buildP7, p8: buildP8, p9: buildP9 };
+Object.keys(builders).forEach(function(id){
+  var el = document.getElementById(id);
+  if (el) el.innerHTML = builders[id]();
+});
+</script>
+</body>
+</html>

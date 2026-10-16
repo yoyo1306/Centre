@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Thèmes GLM — SensorPanel 480×320</title>
+<style>
+  html{scroll-behavior:smooth}
+  body{margin:0;background:#101418;color:#e6edf3;
+       font-family:"Segoe UI",system-ui,sans-serif;padding:34px 30px 60px}
+  h1{margin:0;font-size:26px;letter-spacing:.5px}
+  h1 span{color:#56DC23}
+  p.sub{margin:8px 0 30px;color:#8b98a9;font-size:13.5px;max-width:860px;line-height:1.6}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(508px,1fr));gap:26px;max-width:1620px}
+  .prop{background:#171c22;border:1px solid #262d36;border-radius:14px;padding:16px 16px 14px}
+  .prop h3{margin:2px 0 4px;font-size:15px;display:flex;align-items:center;gap:10px}
+  .numb{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
+        border-radius:7px;background:#0f1317;border:1px solid #333c46;font-size:12px;color:#9fb4bf}
+  .folder{margin-left:auto;font-size:10.5px;color:#5b6a75;font-family:Consolas,monospace}
+  .prop p.d{margin:0 0 12px;color:#98a5b1;font-size:12.5px;line-height:1.55;min-height:38px}
+  iframe{width:480px;height:320px;border:1px solid #303943;border-radius:10px;background:#000;
+         display:block}
+  a.open{display:inline-block;margin-top:10px;color:#7ee06a;font-size:12px;text-decoration:none}
+  a.open:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<h1>Thèmes <span>GLM</span> — SensorPanel 480×320</h1>
+<p class="sub">5 directions graphiques, taille exacte de l'écran, données simulées animées (1 Hz comme le panel
+réel). P1 est la réplique du thème actuel comme point de comparaison. Chaque thème vit dans son dossier :
+ouvre directement <code>&lt;dossier&gt;/index.html</code> en double-clic, + F11 sur le petit moniteur pour l'aperçu 1:1.</p>
+
+<div class="grid">
+  <div class="prop">
+    <h3><span class="numb">1</span>AIDA Classic — fidèle à l'actuel<span class="folder">01-aida-classique/</span></h3>
+    <p class="d">Réplique pixel du thème AIDA vert (Dash Digital-7, ombres portées, courbes sans grille, Fond.png inclus). Référence de comparaison.</p>
+    <iframe src="01-aida-classique/index.html" loading="lazy"></iframe>
+    <a class="open" href="01-aida-classique/index.html" target="_blank">Ouvrir en vrai format →</a>
+  </div>
+
+  <div class="prop">
+    <h3><span class="numb">2</span>Modern Dark — cartes &amp; sparklines<span class="folder">02-modern-dark/</span></h3>
+    <p class="d">Cartes arrondies translucides, chiffres fins en très grand, sparklines à dégradé (cyan CPU / violet GPU), barre d'usage, chip d'état chromatique.</p>
+    <iframe src="02-modern-dark/index.html" loading="lazy"></iframe>
+    <a class="open" href="02-modern-dark/index.html" target="_blank">Ouvrir en vrai format →</a>
+  </div>
+
+  <div class="prop">
+    <h3><span class="numb">3</span>Terminal Ambre — rétro CRT<span class="folder">03-terminal-ambre/</span></h3>
+    <p class="d">Console phosphore ambre : scanlines, lueur, courbes à traînée, barres segmentées, horloge + ligne de statut clignotante.</p>
+    <iframe src="03-terminal-ambre/index.html" loading="lazy"></iframe>
+    <a class="open" href="03-terminal-ambre/index.html" target="_blank">Ouvrir en vrai format →</a>
+  </div>
+
+  <div class="prop">
+    <h3><span class="numb">4</span>Minimal Mono — épuré B/N<span class="folder">04-minimal-mono/</span></h3>
+    <p class="d">Deux demi-blocs à ligne fine, température géante en graisse légère, sparkline blanche fine avec point courant. Rouge seul si &gt; 80 °C.</p>
+    <iframe src="04-minimal-mono/index.html" loading="lazy"></iframe>
+    <a class="open" href="04-minimal-mono/index.html" target="_blank">Ouvrir en vrai format →</a>
+  </div>
+
+  <div class="prop">
+    <h3><span class="numb">5</span>Cyber Néon — gaming setup<span class="folder">05-cyber-neon/</span></h3>
+    <p class="d">Néons cyan (CPU) et magenta (GPU), grille perspective, chiffres italiques lourds, barres segmentées, horloge. Le plus « show-off ».</p>
+    <iframe src="05-cyber-neon/index.html" loading="lazy"></iframe>
+    <a class="open" href="05-cyber-neon/index.html" target="_blank">Ouvrir en vrai format →</a>
+  </div>
+</div>
+</body>
+</html>

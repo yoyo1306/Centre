@@ -1,0 +1,17 @@
+/*
+!/.gitignore
+!/README.md
+!/centre de controle/
+!/sensor-panel-480x320/
+
+!/centre de controle/**
+!/sensor-panel-480x320/**
+
+**/_internal/
+**/build/
+**/dist/
+**/__pycache__/
+**/*.pyc
+**/*.exe
+**/*.zip
+**/theme_cmd.txt
