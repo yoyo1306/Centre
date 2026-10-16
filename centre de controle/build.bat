@@ -14,14 +14,13 @@ taskkill /f /im CentreControle.exe >nul 2>&1
 timeout /t 1 /nobreak >nul
 
 echo [1/3] compile le panel ...
-pushd "%~dp0..\sensor-panel-480x320"
-python -m PyInstaller --noconsole --clean --name sensor_panel sensor_panel.py
+python -m PyInstaller --noconsole --clean -y --name sensor_panel --contents-directory panel_internal sensor_panel.py
 if errorlevel 1 goto err
 move /y "dist\sensor_panel\sensor_panel.exe" "sensor_panel.exe" >nul
-move /y "dist\sensor_panel\_internal" "_internal" >nul
+if exist panel_internal rmdir /s /q panel_internal
+move /y "dist\sensor_panel\panel_internal" "panel_internal" >nul
 rmdir /s /q dist build 2>nul
 del sensor_panel.spec 2>nul
-popd
 
 echo [2/3] compile le centre de controle ...
 python -m PyInstaller --noconsole --clean -y --name centre_controle --icon "oscilloscope.ico" centre_controle.py
@@ -35,7 +34,7 @@ echo [3/3] purge les restes _MEI laisses par l'ancien mode onefile ...
 for /d %%D in ("%TEMP%\_MEI*") do rmdir /s /q "%%D" >nul 2>&1
 
 echo.
-echo OK : CentreControle.exe (+ _internal) et sensor_panel.exe (+ _internal)
+echo OK : CentreControle.exe (+ _internal) et sensor_panel.exe (+ panel_internal)
 echo Garde les deux LA OU ILS SONT : l'exe charge son dossier _internal voisin.
 pause
 exit /b 0

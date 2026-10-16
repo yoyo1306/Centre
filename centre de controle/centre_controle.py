@@ -45,6 +45,7 @@ def fit_grid(n):
     ROWS = max(1, (max(n, 1) + COLS - 1) // COLS)
     FOOT_Y = GRID_Y0 + ROWS * THUMB_H + max(0, ROWS - 1) * GAP + 8
     H = FOOT_Y + 62
+VERSION = "1.0.0"
 PANEL_EXE = "sensor_panel.exe"
 PANEL_PY = "sensor_panel.py"
 PANEL_CFG_NAME = "config.ini"
@@ -119,7 +120,7 @@ def load_cfg():
 
 cfg = load_cfg()
 locked = cfg.getboolean("centre", "locked", fallback=True)
-topmost = cfg.getboolean("centre", "topmost", fallback=True)
+topmost = cfg.getboolean("centre", "topmost", fallback=False)
 admin_on = cfg.getboolean("centre", "admin", fallback=False)
 mini = cfg.getboolean("centre", "mini", fallback=False)
 SCALE = cfg.getint("centre", "scale", fallback=2)          # 1 = 480x320, 2 = 960x640
@@ -185,7 +186,7 @@ def resolve_panel_dir():
         if os.path.isfile(os.path.join(c, PANEL_PY)) or \
                 os.path.isfile(os.path.join(c, PANEL_EXE)):
             return c
-    for cand in (os.path.join(APPDIR, "..", "sensor-panel-480x320"),
+    for cand in (APPDIR,
                  os.path.join(APPDIR, "sensor-panel-480x320")):
         c = os.path.abspath(cand)
         if os.path.isfile(os.path.join(c, PANEL_PY)) or \
@@ -338,6 +339,59 @@ def stop_panel_async(done=None):
     return len(procs)
 
 
+STARTUP_TASK = "SensorPanel"
+
+
+def _schtasks_exe():
+    return os.path.join(os.environ.get("SystemRoot", r"C:\Windows"),
+                        "System32", "schtasks.exe")
+
+
+def panel_startup_enabled():
+    """Vrai si le panneau est planifié à l'ouverture de session, en admin."""
+    try:
+        r = subprocess.run(
+            [_schtasks_exe(), "/Query", "/TN", STARTUP_TASK],
+            capture_output=True, creationflags=0x08000000)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def apply_panel_startup(enabled):
+    """Crée ou retire la tâche de démarrage. La création demande l'élévation."""
+    exe = os.path.join(PANEL_DIR or "", PANEL_EXE)
+    if enabled and not os.path.isfile(exe):
+        return False, "sensor_panel.exe introuvable"
+    if (not enabled) and (not panel_startup_enabled()):
+        return True, None
+    tmp = os.environ.get("TEMP") or APPDIR
+    log = os.path.join(tmp, "sensorpanel_startup.txt")
+    script = os.path.join(tmp, "sensorpanel_startup.cmd")
+    if enabled:
+        body = (
+            "schtasks /Create /F /TN %s /SC ONLOGON /RL HIGHEST /IT "
+            "/TR \"\\\"%s\\\"\" > \"%s\" 2>&1\r\n" % (STARTUP_TASK, exe, log)
+        )
+    else:
+        body = "schtasks /Delete /F /TN %s > \"%s\" 2>&1\r\n" % (STARTUP_TASK, log)
+    try:
+        if os.path.isfile(log):
+            os.remove(log)
+        with open(script, "w", encoding="ascii", errors="replace") as f:
+            f.write(body)
+    except Exception as e:
+        return False, str(e)
+    rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", script, None, tmp, 0)
+    if rc <= 32:
+        return False, "action refusée"
+    for _ in range(40):
+        time.sleep(0.25)
+        if panel_startup_enabled() == bool(enabled):
+            return True, None
+    return False, "échec"
+
+
 def launch_panel(admin, target):
     file, params = target
     try:
@@ -395,20 +449,10 @@ drag = {"moving": False, "dx": 0, "dy": 0}   # deplacement via la barre de titre
 
 root = tk.Tk()
 root.title("Centre de controle")
-_icon_imgs = []
-for _name in ("oscilloscope-16.png", "oscilloscope-24.png", "oscilloscope-32.png",
-              "oscilloscope-48.png", "oscilloscope.png"):
-    _path = os.path.join(APPDIR, _name)
-    if not os.path.isfile(_path):
-        continue
+_icon = os.path.join(APPDIR, "oscilloscope.ico")
+if os.path.isfile(_icon):
     try:
-        _icon_imgs.append(tk.PhotoImage(file=_path))
-    except Exception:
-        pass
-if _icon_imgs:
-    try:
-        root.iconphoto(True, *_icon_imgs)
-        root._icon_imgs = _icon_imgs
+        root.iconbitmap(_icon)
     except Exception:
         pass
 root.resizable(False, False)
@@ -476,15 +520,14 @@ def chip(store, key, x1, y1, x2, y2, label, kind="ghost", fg=None, size=8):
 def draw_title():
     cv.create_rectangle(0, 0, X(W), X(TITLE_H), fill=C["header"], outline="")
     cv.create_rectangle(0, X(TITLE_H) - 1, X(W), X(TITLE_H), fill=C["line"], outline="")
-    # Titre interne seulement sans barre Windows (fenêtre verrouillée).
-    if locked or mini:
+    if mini:
         cv.create_rectangle(X(12), X(11), X(15), X(23), fill=C["accent"], outline="")
         cv.create_text(X(22), X(TITLE_H / 2), text="Centre de contrôle",
                        anchor="w", fill=C["txt"], font=fnt(10, True))
-    if mini:
         cv.create_text(X(W - 12), X(TITLE_H / 2), anchor="e",
                        text="Cliquer pour rouvrir", fill=C["mut"], font=fnt(8))
         return
+    chip(HDR, "options", 8, 6, 104, 28, "Options")
     # paire Clair / Sombre : la pastille pleine est le theme actif
     chip(HDR, "theme_light", W - 156, 6, W - 84, 28, "Clair",
          "solid" if appearance == "light" else "ghost",
@@ -499,20 +542,14 @@ _THUMB_KEEP = []
 
 
 def load_thumbs():
-    """Vignettes réelles (theme muse spark, sinon theme deepseek)."""
+    """Vignettes 480×320 : themes/<clé>/preview.png, à côté du panneau."""
     THUMBS.clear()
     _THUMB_KEEP.clear()
-    roots = []
-    if PANEL_DIR:
-        roots.append(os.path.join(PANEL_DIR, "theme muse spark"))
-        roots.append(os.path.join(PANEL_DIR, "theme deepseek"))
-        roots.append(os.path.join(PANEL_DIR, "theme-glm"))
+    folder = os.path.join(PANEL_DIR, "themes") if PANEL_DIR else ""
     for s in SCHEMES:
         img = None
-        for folder in roots:
-            path = os.path.join(folder, s["key"], "preview.png")
-            if not os.path.isfile(path):
-                continue
+        path = os.path.join(folder, s["key"], "preview.png")
+        if os.path.isfile(path):
             try:
                 src = tk.PhotoImage(file=path)
                 _THUMB_KEEP.append(src)
@@ -523,7 +560,6 @@ def load_thumbs():
                 _THUMB_KEEP.append(img)
             except Exception:
                 img = None
-            break
         THUMBS.append(img)
 
 
@@ -581,6 +617,8 @@ def draw_footer():
     chip(BTN, "stop", 8, by1, 150, by2, "Arrêter", size=9)
     chip(BTN, "run", 156, by1, W - 156, by2, "Appliquer", "solid", size=9)
     chip(BTN, "quit", W - 150, by1, W - 8, by2, "Quitter", fg=C["warn"], size=9)
+    cv.create_text(X(W - 12), X(sy), anchor="e", text="v" + VERSION,
+                   fill=C["mut"], font=fnt(8))
     update_status()
 
 
@@ -658,6 +696,7 @@ def paint():
         draw_rows()
         draw_footer()
     cv.create_rectangle(1, 1, X(W) - 1, hpx - 1, outline=C["line"], width=1)
+    draw_options()
 
 
 def render():
@@ -820,19 +859,35 @@ def hit(x, y, r):
 def on_press(e):
     """Coord logiques : tout le traitement est fait en espace 480x320."""
     lx, ly = e.x / SCALE, e.y / SCALE
+    if opt_open and hit(lx, ly, opt_box):
+        for key, rect in opt_rects.items():
+            if not hit(lx, ly, rect):
+                continue
+            if key == "toggle":
+                toggle_startup()
+            elif key == "close":
+                close_options()
+            return
+        return
+    on_options = (not mini) and ly <= TITLE_H and "options" in HDR and hit(lx, ly, HDR["options"])
+    if opt_open and not on_options:
+        close_options()
     if ly <= TITLE_H:
         if mini:
             toggle_mini()                      # clic titre en mode mini = rouvrir
             return
         for k, rect in HDR.items():
             if hit(lx, ly, rect):
-                if k == "theme_light":
+                if k == "options":
+                    show_options(e)
+                elif k == "theme_light":
                     set_appearance("light")
                 elif k == "theme_dark":
                     set_appearance("dark")
                 return
-        drag["moving"] = True                  # glisser la barre de titre
-        drag["dx"], drag["dy"] = e.x, e.y      # deplacable meme verrouille
+        if locked and lx < W - 156:
+            drag["moving"] = True              # sans barre Windows, le titre déplace
+            drag["dx"], drag["dy"] = e.x, e.y
         return
     if mini:
         return
@@ -854,6 +909,20 @@ def on_motion(e):
             cv.configure(cursor="hand2")
         return
     lx, ly = e.x / SCALE, e.y / SCALE
+    if opt_open and hit(lx, ly, opt_box):
+        key = None
+        for k, rect in opt_rects.items():
+            if hit(lx, ly, rect):
+                key = k
+                break
+        if key != opt_hover or HOVER["row"] is not None or HOVER["btn"]:
+            globals()["opt_hover"] = key
+            HOVER["row"], HOVER["btn"] = None, None
+            paint()
+        cv.configure(cursor="hand2" if key else "")
+        return
+    if opt_hover is not None:
+        globals()["opt_hover"] = None
     row, btn = None, None
     if ly <= TITLE_H:
         for k, rect in HDR.items():
@@ -874,7 +943,7 @@ def on_motion(e):
         paint()
     if btn or row is not None:
         cv.configure(cursor="hand2")
-    elif ly <= TITLE_H:
+    elif locked and ly <= TITLE_H and lx < W - 156:
         cv.configure(cursor="fleur")
     else:
         cv.configure(cursor="")
@@ -883,8 +952,9 @@ def on_motion(e):
 def on_leave(e):
     if drag["moving"]:
         return
-    if HOVER["row"] is not None or HOVER["btn"]:
+    if HOVER["row"] is not None or HOVER["btn"] or opt_hover is not None:
         HOVER["row"], HOVER["btn"] = None, None
+        globals()["opt_hover"] = None
         paint()
     cv.configure(cursor="")
 
@@ -894,11 +964,15 @@ def set_appearance(name):
         return
     save_cfg(new_appearance=name)
     use_palette(appearance)
+    close_options()
     build_menu()
     render()
 
 
 def on_key(e):
+    if e.keysym == "Escape" and opt_open:
+        close_options()
+        return
     if SCHEMES and e.keysym in ("Up", "Down"):
         cur = SELECTION if SELECTION is not None else -1
         globals()["SELECTION"] = int(max(0, min(len(SCHEMES) - 1,
@@ -948,6 +1022,99 @@ def recenter_primary():
 
 
 menu = tk.Menu(root, tearoff=0)
+opt_open = False
+opt_box = (0, 0, 0, 0)
+opt_rects = {}
+opt_hover = None
+opt_state = {"on": False, "busy": False}
+
+
+def close_options():
+    global opt_open, opt_hover
+    if not opt_open:
+        return
+    opt_open = False
+    opt_hover = None
+    paint()
+
+
+def show_options(e):
+    """Panneau Options dessiné dans la fenêtre, donc il suit le déplacement."""
+    global opt_open
+    if opt_open:
+        close_options()
+        return
+    opt_state["on"] = panel_startup_enabled()
+    opt_open = True
+    paint()
+
+
+def toggle_startup():
+    if opt_state["busy"]:
+        return
+    want = not opt_state["on"]
+    opt_state["busy"] = True
+    paint()
+
+    def work():
+        ok, err = apply_panel_startup(want)
+
+        def done():
+            opt_state["busy"] = False
+            if ok:
+                opt_state["on"] = want
+                show_flash("démarrage Windows activé" if want
+                           else "démarrage Windows retiré", "ok")
+            else:
+                show_flash(err or "échec", "warn")
+            paint()
+        try:
+            root.after(0, done)
+        except Exception:
+            pass
+    _exec.submit(work)
+
+
+def draw_options():
+    """Colle le panneau sous le bouton Options, dans le canvas du centre."""
+    global opt_box
+    if not opt_open or mini:
+        return
+    rect = HDR.get("options")
+    ox = rect[0] if rect else 8
+    oy = (rect[3] + 6) if rect else TITLE_H
+    ow, oh = 236, 80
+    opt_box = (ox, oy, ox + ow, oy + oh)
+    opt_rects.clear()
+    cv.create_rectangle(X(ox), X(oy), X(ox + ow), X(oy + oh),
+                        fill=C["header"], outline="")
+    cv.create_text(X(ox + 12), X(oy + 16), anchor="w",
+                   text="Lancer le panneau au démarrage",
+                   fill=C["txt"], font=fnt(8))
+    cv.create_text(X(ox + 12), X(oy + 32), anchor="w",
+                   text="Activé" if opt_state["on"] else "Désactivé",
+                   fill=C["accent"] if opt_state["on"] else C["mut"],
+                   font=fnt(8))
+    by1, by2 = oy + 46, oy + 68
+    bits = (
+        ("toggle", ox + 24, ox + 136,
+         "Désactiver" if opt_state["on"] else "Activer", "solid"),
+        ("close", ox + 144, ox + 224, "Fermer", "ghost"),
+    )
+    for key, x1, x2, label, kind in bits:
+        opt_rects[key] = (x1, by1, x2, by2)
+        hot = opt_hover == key and not opt_state["busy"]
+        if kind == "solid":
+            fill, col, ol = C["accent"], C["on_accent"], C["accent"]
+        elif hot:
+            fill, col, ol = C["btn_hover"], C["txt"], C["btn_line"]
+        else:
+            fill, col, ol = C["btn"], C["txt"], C["btn_line"]
+        round_rect(x1, by1, x2, by2, 6, fill=fill, outline=ol, width=1)
+        cv.create_text(X((x1 + x2) / 2), X((by1 + by2) / 2), text=label,
+                       fill=col, font=fnt(8, True))
+    cv.create_rectangle(X(ox) + 1, X(oy) + 1, X(ox + ow) - 1, X(oy + oh) - 1,
+                        outline=C["line"], width=1)
 
 
 def build_menu():
@@ -1003,6 +1170,7 @@ root.bind("<Alt-F4>", lambda e: on_close())
 root.bind("<Up>", on_key)
 root.bind("<Down>", on_key)
 root.bind("<Return>", on_key)
+root.bind("<Escape>", on_key)
 root.protocol("WM_DELETE_WINDOW", on_close)
 
 build_menu()

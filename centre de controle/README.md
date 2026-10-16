@@ -1,6 +1,6 @@
 # Centre de contrôle
 
-Fenêtre qui pilote le panneau capteurs 480×320 (`sensor-panel-480x320`).
+Fenêtre qui pilote le panneau capteurs 480×320, dans le même dossier.
 Le centre s’affiche sur l’écran principal. Le panneau reste sur le petit moniteur.
 
 Le dépôt contient les sources des deux programmes, pour pouvoir les modifier et les recompiler.
@@ -13,24 +13,18 @@ Dézipper en gardant les dossiers côte à côte :
 ```
 CentreControle.exe
 _internal\
-oscilloscope-16.png
-oscilloscope-24.png
-oscilloscope-32.png
-oscilloscope-48.png
-oscilloscope.png
-sensor-panel-480x320\
-    sensor_panel.exe
-    sensor_panel.py
-    _internal\
-    config.ini
-    assets\Fond.png
-    libs\
-    theme muse spark\<thème>\preview.png
-    theme-glm\<thème>\preview.png
+oscilloscope.ico
+sensor_panel.exe
+panel_internal\
+sensor_panel.py
+config.ini
+assets\Fond.png
+libs\
+themes\<thème>\preview.png
 ```
 
-`CentreControle.exe` et son dossier `_internal` doivent rester ensemble. Pareil pour `sensor_panel.exe`.
-Sans `centre.ini`, le centre cherche le panneau dans `sensor-panel-480x320` à côté de l’exe.
+`CentreControle.exe` reste avec `_internal`. `sensor_panel.exe` reste avec `panel_internal`. Les deux dossiers n’ont pas le même nom, sinon un exe écrase l’autre.
+Sans `centre.ini`, le centre cherche `sensor_panel.exe` dans son propre dossier.
 Un second lancement ramène la fenêtre déjà ouverte au premier plan.
 
 Le panneau est lancé en administrateur (température CPU Ryzen via LibreHardwareMonitor).
@@ -73,7 +67,7 @@ Treize thèmes. Les neuf premiers sont les thèmes verts d’origine. Les quatre
 | 12-minimal | Minimal Mono |
 | 13-neon | Cyber Neon |
 
-Le centre lit les thèmes dans `sensor-panel-480x320/sensor_panel.py`, avec exactement :
+Le centre lit les thèmes dans `sensor_panel.py`, avec exactement :
 
 ```
 name = "10-modern"
@@ -84,8 +78,7 @@ Quatre espaces avant `desc`. Une clé ne doit pas commencer par le numéro d’u
 
 Les vignettes sont des PNG 480×320 :
 
-- `theme muse spark\<clé>\preview.png` pour 01 à 09
-- `theme-glm\<clé>\preview.png` pour 10 à 13
+- `themes\<clé>\preview.png` pour les treize thèmes
 
 ## Sources
 
@@ -93,26 +86,25 @@ Les vignettes sont des PNG 480×320 :
 centre de controle\
     centre_controle.py      interface du centre
     CentreControle.exe      exe compilé, à côté de _internal
-    oscilloscope.ico        icône de l’exe
-    oscilloscope*.png       icône de la fenêtre
+    oscilloscope.ico        icône de l’exe et de la fenêtre
     centre.ini              réglages locaux
     build.bat               recompile les deux exe
-sensor-panel-480x320\
     sensor_panel.py         panneau et thèmes
-    sensor_panel.exe        exe compilé, à côté de _internal
+    sensor_panel.exe        exe du panneau, à côté de panel_internal
     config.ini              position, thème enregistré
     assets\Fond.png         fond des thèmes verts
     libs\                   LibreHardwareMonitor (température CPU)
+    themes\                 vignettes du centre
 ```
 
-`_internal`, `build` et `dist` sont produits par PyInstaller. Ils ne sont pas dans le dépôt. Ils sont dans le zip de la release.
+`_internal`, `panel_internal`, `build` et `dist` sont produits par PyInstaller. Ils ne sont pas dans le dépôt. Ils sont dans le zip de la release.
 
 ## Réglages (`centre.ini`)
 
 ```ini
 [centre]
 locked = false
-topmost = true
+topmost = false
 admin = true
 mini = false
 x = 800
@@ -121,19 +113,19 @@ scale = 1
 appearance = light
 
 [panel]
-path = C:\chemin\vers\sensor-panel-480x320
+path = C:\chemin\vers\centre de controle
 ```
 
 `appearance` vaut `light` ou `dark`. `scale` reste à 1 : il n’y a plus de bouton pour agrandir la fenêtre.
 
 ## Recompiler
 
-Prérequis : Python 3.12, puis `pip install pyinstaller` et, pour le panneau, les paquets de `sensor-panel-480x320/requirements.txt` (`psutil`, `pynvml`, `pythonnet`).
+Prérequis : Python 3.12, puis `pip install pyinstaller` et, pour le panneau, `psutil`, `pynvml` et `pythonnet` (`requirements.txt`).
 
 ```
 centre de controle\build.bat
 ```
 
-Le script arrête les deux programmes, recompile le panneau puis le centre, et replace chaque exe à côté de son `_internal`. L’icône du centre est `oscilloscope.ico`.
+Le script arrête les deux programmes, recompile le panneau puis le centre, et replace chaque exe à côté de son dossier d’exécution. L’icône du centre est `oscilloscope.ico`.
 
 Les coordonnées souris du centre sont des flottants. Tout index de liste calculé depuis un clic doit passer par `int(...)`. Dans l’exe sans console, une exception Tk n’affiche rien : le clic a l’air de ne rien faire.

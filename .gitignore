@@ -2,12 +2,11 @@
 !/.gitignore
 !/README.md
 !/centre de controle/
-!/sensor-panel-480x320/
 
 !/centre de controle/**
-!/sensor-panel-480x320/**
 
 **/_internal/
+**/panel_internal/
 **/build/
 **/dist/
 **/__pycache__/
