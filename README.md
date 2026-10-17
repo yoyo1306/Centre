@@ -6,6 +6,8 @@ Le centre s’affiche sur l’écran principal. Le panneau reste sur le petit mo
 Le dépôt contient les sources des deux programmes, pour pouvoir les modifier et les recompiler.
 La release GitHub joint un zip qui ne contient que le nécessaire pour lancer le logiciel.
 
+![Centre de contrôle](centre%20de%20controle/apercu.png)
+
 ## Lancer le zip
 
 Dézipper en gardant les dossiers côte à côte :
