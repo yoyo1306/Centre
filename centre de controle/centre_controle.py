@@ -5,11 +5,18 @@ relance / arrete le panel. Le panel demarre toujours en admin (temp CPU Ryzen).
 
 Apparence : theme sombre ou clair (centre.ini > appearance), bascule dans la
 barre de titre. Echelle x1/x2. Position persistee (x/y) ; sinon centre de
-l'ecran principal. Clic droit : menu.
+l'ecran principal. Menu Options : demarrage, vitesse, moniteur et centre.
 """
 import configparser
 import ctypes
 from ctypes import wintypes
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+except Exception:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
 import math
 import os
 import re
@@ -29,26 +36,46 @@ except Exception:
     HAVE_PSUTIL = False
 
 FROZEN = getattr(sys, "frozen", False)
+if FROZEN and (sys.stdout is None or sys.stderr is None):
+    class _Quiet(object):
+        def write(self, *_a):
+            pass
+
+        def flush(self):
+            pass
+    if sys.stdout is None:
+        sys.stdout = _Quiet()
+    if sys.stderr is None:
+        sys.stderr = _Quiet()
+
 APPDIR = os.path.dirname(os.path.abspath(sys.executable if FROZEN else __file__))
 CFG_PATH = os.path.join(APPDIR, "centre.ini")
-# Grille 3×3 : aperçus 480×320 réduits d'un facteur 3 (160×106).
-PAD, GAP, COLS = 8, 8, 3
+# Grille 3×4 : aperçus 480×320 réduits d'un facteur 3 (160×107). Le reste est paginé.
+PAD, GAP, COLS, ROWS = 8, 8, 3, 4
 THUMB_W, THUMB_H = 160, 107
+PANEL_W, PANEL_H = 480, 320
 GRID_Y0 = 70               # sous la rangée de luminosité
-ROWS = 3
+PAGE = COLS * ROWS
+PAGER_Y = GRID_Y0 + ROWS * THUMB_H + (ROWS - 1) * GAP + 8
+PAGER_H = 32
 W = PAD + COLS * THUMB_W + (COLS - 1) * GAP + PAD
-FOOT_Y = GRID_Y0 + ROWS * THUMB_H + (ROWS - 1) * GAP + 8
+FOOT_Y = PAGER_Y + PAGER_H + 8
 H = FOOT_Y + 62
 
 
-def fit_grid(n):
-    """Agrandit la fenêtre pour autant de rangées que de thèmes."""
-    global ROWS, FOOT_Y, H
-    ROWS = max(1, (max(n, 1) + COLS - 1) // COLS)
-    FOOT_Y = GRID_Y0 + ROWS * THUMB_H + max(0, ROWS - 1) * GAP + 8
+def fit_grid(n=None):
+    """La grille reste 3×4. n est ignoré : les thèmes au-delà passent à la page suivante."""
+    global FOOT_Y, H
+    FOOT_Y = PAGER_Y + PAGER_H + 8
     H = FOOT_Y + 62
 VERSION = "1.1.0"
-PANEL_EXE = "sensor_panel.exe"
+SPEEDS = (
+    ("high", "Élevé", 500),
+    ("normal", "Normal", 1000),
+    ("low", "Faible", 4000),
+    ("paused", "En pause", 0),
+)
+PANEL_EXE = "Moniteur.exe"
 PANEL_PY = "sensor_panel.py"
 PANEL_CFG_NAME = "config.ini"
 APPLY_WAV = r"C:\Users\Kevin AJOURY\Documents\Projet IA\dofus-grab\Dofus-Grab.v32i.yolo26\staplebops-01.wav"
@@ -75,26 +102,33 @@ PALETTES = {
 C = {}
 TITLE_H = 34               # logique
 
-_exec = futures.ThreadPoolExecutor(max_workers=2)
+_exec = futures.ThreadPoolExecutor(max_workers=4)
 
-# ---------- dpi exact (pixels reels) ----------
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
-except Exception:
-    try:
-        ctypes.windll.user32.SetProcessDPIAware()
-    except Exception:
-        pass
+# ---------- ctypes Windows (64-bit safe) ----------
+_user32 = ctypes.windll.user32
+_shell32 = ctypes.windll.shell32
+_kernel32 = ctypes.windll.kernel32
+_user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+_user32.FindWindowW.restype = wintypes.HWND
+_user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+_user32.ShowWindow.restype = wintypes.BOOL
+_user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+_user32.SetForegroundWindow.restype = wintypes.BOOL
+_shell32.ShellExecuteW.argtypes = [
+    wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR,
+    wintypes.LPCWSTR, wintypes.LPCWSTR, ctypes.c_int]
+_shell32.ShellExecuteW.restype = ctypes.c_void_p
 
 # ---------- un seul exemplaire du centre ----------
 # Double-clic supplementaire sur l'exe : remet la fenetre existante au premier
 # plan et ferme la 2e instance au lieu d'en ouvrir 10.
-_hmutex = ctypes.windll.kernel32.CreateMutexW(None, False, "CentreControleSingleInstance")
+_hmutex = _kernel32.CreateMutexW(None, False, "CentreControleSingleInstance")
 if ctypes.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-    hwnd = ctypes.windll.user32.FindWindowW(None, "Centre de controle")
+    hwnd = _user32.FindWindowW(None, "Centre de controle")
     try:
-        ctypes.windll.user32.ShowWindow(hwnd, 9)      # SW_RESTORE
-        ctypes.windll.user32.SetForegroundWindow(hwnd)
+        if hwnd:
+            _user32.ShowWindow(hwnd, 9)      # SW_RESTORE
+            _user32.SetForegroundWindow(hwnd)
     except Exception:
         pass
     sys.exit(0)
@@ -150,11 +184,13 @@ def use_palette(name=None):
 use_palette()
 
 
-def save_cfg(set_locked=None, new_admin=None, new_mini=None, new_scale=None,
-             new_appearance=None):
-    global locked, admin_on, mini, SCALE, appearance
+def save_cfg(set_locked=None, new_topmost=None, new_admin=None, new_mini=None,
+             new_scale=None, new_appearance=None):
+    global locked, topmost, admin_on, mini, SCALE, appearance
     if set_locked is not None:
         locked = set_locked
+    if new_topmost is not None:
+        topmost = new_topmost
     if new_admin is not None:
         admin_on = new_admin
     if new_mini is not None:
@@ -170,8 +206,14 @@ def save_cfg(set_locked=None, new_admin=None, new_mini=None, new_scale=None,
         cfg.set("centre", "mini", str(mini).lower())
         cfg.set("centre", "scale", str(SCALE))
         cfg.set("centre", "appearance", appearance)
-        cfg.set("centre", "x", str(root.winfo_x()))
-        cfg.set("centre", "y", str(root.winfo_y()))
+        try:
+            if root.winfo_ismapped() and root.state() == "normal":
+                rx, ry = root.winfo_x(), root.winfo_y()
+                if rx > -10000 and ry > -10000:
+                    cfg.set("centre", "x", str(rx))
+                    cfg.set("centre", "y", str(ry))
+        except Exception:
+            pass
         if PANEL_DIR:
             cfg.set("panel", "path", PANEL_DIR)
         with open(CFG_PATH, "w", encoding="utf-8") as f:
@@ -198,6 +240,7 @@ def resolve_panel_dir():
 
 
 PANEL_DIR = resolve_panel_dir()
+_panel_running_cache = False
 
 
 def panel_cfg_path():
@@ -209,10 +252,11 @@ def read_panel_schemes():
     out = []
     src = os.path.join(PANEL_DIR or "", PANEL_PY)
     try:
-        txt = open(src, encoding="utf-8").read()
+        with open(src, encoding="utf-8") as f:
+            txt = f.read()
     except Exception:
         return out
-    for m in re.finditer(r'name = "([^"]+)"\n    desc = "([^"]+)"', txt):
+    for m in re.finditer(r'name\s*=\s*"([^"]+)"\s*\r?\n\s*desc\s*=\s*"([^"]+)"', txt):
         g = re.match(r"(\d+)", m.group(1))
         if g:
             out.append(dict(i=int(g.group(1)), key=m.group(1), desc=m.group(2)))
@@ -220,14 +264,30 @@ def read_panel_schemes():
 
 
 def read_panel_theme_key():
+    pt = panel_cfg_path()
+    if not pt:
+        return "1"
     try:
-        m = re.search(r"(?m)^\s*theme\s*=\s*(\S+)",
-                      open(panel_cfg_path(), encoding="utf-8").read())
+        with open(pt, encoding="utf-8") as f:
+            txt = f.read()
+        m = re.search(r"(?m)^\s*theme\s*=\s*([^\s#;]+)", txt)
         if m:
             return m.group(1)
     except Exception:
         pass
     return "1"
+
+
+def read_panel_bool(name, default=True):
+    pt = panel_cfg_path()
+    if not pt:
+        return default
+    try:
+        c = configparser.ConfigParser()
+        c.read(pt, encoding="utf-8")
+        return c.getboolean("panel", name, fallback=default)
+    except Exception:
+        return default
 
 
 def match_theme(want, schemes):
@@ -246,21 +306,85 @@ def match_theme(want, schemes):
     return schemes[0]
 
 
+def _set_ini_line(txt, name, value):
+    new, n = re.subn(r"(?m)^(\s*" + re.escape(name) + r"\s*=\s*).*$",
+                     lambda m: m.group(1) + value, txt, count=1)
+    if n:
+        return new
+    m = re.search(r"(?m)^\[panel\]\s*$", txt)
+    if m:
+        pos = m.end()
+        return txt[:pos] + "\n" + name + " = " + value + txt[pos:]
+    sep = "\n" if txt and not txt.endswith("\n") else ""
+    return txt + sep + "[panel]\n" + name + " = " + value + "\n"
+
+
+def write_panel_ini(pairs):
+    """Met a jour une ou plusieurs cles [panel] dans config.ini (commentaires preserves)."""
+    pt = panel_cfg_path()
+    if not pt:
+        return False
+    try:
+        txt = ""
+        if os.path.isfile(pt):
+            with open(pt, encoding="utf-8") as f:
+                txt = f.read()
+        for k, v in pairs.items():
+            txt = _set_ini_line(txt, k, str(v))
+        with open(pt, "w", encoding="utf-8") as f:
+            f.write(txt)
+        return True
+    except Exception:
+        return False
+
+
 def write_panel_theme(key):
     """theme=key dans config.ini du panel, commentaires preserves."""
+    return write_panel_ini({"theme": key})
+
+
+def read_update_speed():
+    """high, normal, low ou paused. Défaut : normal."""
     pt = panel_cfg_path()
+    if not pt:
+        return "normal"
     try:
-        txt = open(pt, encoding="utf-8").read() if os.path.isfile(pt) else ""
-        new, n = re.subn(r"(?m)^(\s*theme\s*=\s*).*$",
-                         lambda m: m.group(1) + str(key), txt, count=1)
-        if not n:
-            if "[panel]" in txt:
-                new = txt.replace("[panel]", "[panel]\ntheme = " + str(key), 1)
-            else:
-                new = (txt + ("\n" if txt and not txt.endswith("\n") else "") +
-                       "[panel]\ntheme = " + str(key) + "\n")
-        with open(pt, "w", encoding="utf-8") as f:
-            f.write(new)
+        with open(pt, encoding="utf-8") as f:
+            txt = f.read()
+    except Exception:
+        return "normal"
+    m = re.search(r"(?m)^\s*update_speed\s*=\s*([^\s#;]+)", txt)
+    if m and m.group(1).strip().lower() in dict((k, 1) for k, _l, _v in SPEEDS):
+        return m.group(1).strip().lower()
+    m = re.search(r"(?m)^\s*interval_ms\s*=\s*(\d+)", txt)
+    if m:
+        ms = int(m.group(1))
+        for key, _label, val in SPEEDS:
+            if val and val == ms:
+                return key
+    return "normal"
+
+
+def write_update_speed(key):
+    """Écrit update_speed. interval_ms suit, sauf en pause."""
+    ms = dict((k, v) for k, _l, v in SPEEDS).get(key)
+    if ms is None:
+        return False
+    pairs = {"update_speed": key}
+    if key != "paused":
+        pairs["interval_ms"] = str(ms)
+    return write_panel_ini(pairs)
+
+
+def send_panel_cmd(*lines):
+    """Envoie une ou plusieurs commandes live a sensor_panel.py via panel_cmd.txt."""
+    if not PANEL_DIR:
+        return False
+    p = os.path.join(PANEL_DIR, "panel_cmd.txt")
+    try:
+        with open(p, "a", encoding="utf-8") as f:
+            for ln in lines:
+                f.write(str(ln).strip() + "\n")
         return True
     except Exception:
         return False
@@ -272,7 +396,7 @@ def panel_problem():
             return "dossier panel introuvable (centre.ini > [panel] path)"
         if not (os.path.isfile(os.path.join(PANEL_DIR, PANEL_EXE)) or
                 os.path.isfile(os.path.join(PANEL_DIR, PANEL_PY))):
-            return "sensor_panel.exe/.py absent dans " + PANEL_DIR
+            return "Moniteur.exe absent dans " + PANEL_DIR
     except Exception as e:
         return str(e)
     return None
@@ -296,44 +420,59 @@ def panel_launch_target():
 
 def panel_running():
     """Processus du panel (psutil requis ; [] sinon)."""
+    global _panel_running_cache
     if not HAVE_PSUTIL:
+        _panel_running_cache = False
         return []
     out = []
     try:
-        for p in psutil.process_iter(["pid", "name", "cmdline"]):
+        for p in psutil.process_iter(["pid", "name"]):
             info = p.info or {}
             nl = (info.get("name") or "").lower()
-            if "sensor_panel" in nl:
+            if nl in ("moniteur.exe", "sensor_panel.exe"):
                 out.append(p)
                 continue
-            cl = " ".join(info.get("cmdline") or []).lower() \
-                if info.get("cmdline") else ""
-            if "sensor_panel.py" in cl and "centre_controle" not in cl:
-                out.append(p)
+            if nl.startswith("python"):
+                try:
+                    cl = " ".join(p.cmdline() or []).lower()
+                except Exception:
+                    cl = ""
+                if "sensor_panel.py" in cl and "centre_controle" not in cl:
+                    out.append(p)
     except Exception:
         pass
+    _panel_running_cache = bool(out)
     return out
 
 
 def stop_panel_async(done=None):
-    """terminate() immediat ; kill verifie apres 2 s dans un worker."""
+    """Demande un arret propre via panel_cmd.txt + terminate/kill en secours."""
     procs = panel_running()
-    for p in procs:
-        try:
-            p.terminate()
-        except Exception:
-            pass
+    if procs:
+        send_panel_cmd("quit")
+        for p in procs:
+            try:
+                p.terminate()
+            except Exception:
+                pass
 
     def work():
-        time.sleep(2.0)
-        for p in panel_running():
+        for _ in range(8):
+            time.sleep(0.25)
+            if not panel_running():
+                break
+        rem = panel_running()
+        for p in rem:
             try:
                 p.kill()
             except Exception:
                 pass
+        if rem:
+            time.sleep(0.2)
+        still = bool(panel_running())
         if done:
             try:
-                root.after(0, done)
+                root.after(0, lambda ok=(not still): done(ok))
             except Exception:
                 pass
     if procs:
@@ -364,7 +503,7 @@ def apply_panel_startup(enabled):
     """Crée ou retire la tâche de démarrage. La création demande l'élévation."""
     exe = os.path.join(PANEL_DIR or "", PANEL_EXE)
     if enabled and not os.path.isfile(exe):
-        return False, "sensor_panel.exe introuvable"
+        return False, "Moniteur.exe introuvable"
     if (not enabled) and (not panel_startup_enabled()):
         return True, None
     tmp = os.environ.get("TEMP") or APPDIR
@@ -384,23 +523,30 @@ def apply_panel_startup(enabled):
             f.write(body)
     except Exception as e:
         return False, str(e)
-    rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", script, None, tmp, 0)
-    if rc <= 32:
+    rc = _shell32.ShellExecuteW(None, "runas", script, None, tmp, 0)
+    if int(rc or 0) <= 32:
         return False, "action refusée"
+    ok = False
     for _ in range(40):
         time.sleep(0.25)
         if panel_startup_enabled() == bool(enabled):
-            return True, None
-    return False, "échec"
+            ok = True
+            break
+    for p in (script, log):
+        try:
+            if os.path.isfile(p):
+                os.remove(p)
+        except Exception:
+            pass
+    return (True, None) if ok else (False, "échec")
 
 
 def launch_panel(admin, target):
     file, params = target
     try:
         if admin:
-            r = ctypes.windll.shell32.ShellExecuteW(None, "runas", file,
-                                                    params, PANEL_DIR, 1)
-            if r <= 32:
+            r = _shell32.ShellExecuteW(None, "runas", file, params, PANEL_DIR, 1)
+            if int(r or 0) <= 32:
                 return False, "lancement admin refuse (UAC annule ?)"
         else:
             lst = [file] + ([params.strip('"')] if params else [])
@@ -444,12 +590,14 @@ def center_on_primary():
 # ---------- UI ----------
 SCHEMES = []
 SELECTION = None
+page = 0
 preview_key = None          # thème affiché sur le panel, pas encore enregistré
 flash = None
 last_launch = 0.0
 drag = {"moving": False, "dx": 0, "dy": 0}   # deplacement via la barre de titre
 
 root = tk.Tk()
+root.withdraw()
 root.title("Centre de controle")
 _icon = os.path.join(APPDIR, "ico.ico")
 if os.path.isfile(_icon):
@@ -459,6 +607,7 @@ if os.path.isfile(_icon):
         pass
 root.resizable(False, False)
 root.configure(bg=C["bg"])
+fit_grid(len(read_panel_schemes()))
 
 cv = tk.Canvas(root, width=W * SCALE, height=H * SCALE, bg=C["bg"],
                bd=0, highlightthickness=0)
@@ -486,27 +635,77 @@ def fnt(size, bold=False):
     return ("Segoe UI", size * SCALE)
 
 
+_AA = {}
+
+
+def _hex(color):
+    color = color.lstrip("#")
+    return tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _in_round(px, py, w, h, r):
+    if w <= 0 or h <= 0:
+        return False
+    rr = min(r, w / 2.0, h / 2.0)
+    dx = abs(px - w / 2.0) - (w / 2.0 - rr)
+    dy = abs(py - h / 2.0) - (h / 2.0 - rr)
+    if dx > 0 and dy > 0:
+        return dx * dx + dy * dy <= rr * rr
+    return dx <= rr and dy <= rr
+
+
+def _aa_chip(w, h, r, fill, outline, stroke, backdrop):
+    """Puce antialiasée, composée sur la couleur du fond."""
+    key = (w, h, r, fill, outline, stroke, backdrop)
+    img = _AA.get(key)
+    if img is not None:
+        return img
+    ss = 4
+    n = ss * ss
+    fc, oc, bc = _hex(fill), _hex(outline), _hex(backdrop)
+    iw, ih, ir = w - 2 * stroke, h - 2 * stroke, max(0, r - stroke)
+    rows = []
+    for y in range(h):
+        cells = []
+        for x in range(w):
+            nf = no = 0
+            for sy in range(ss):
+                for sx in range(ss):
+                    px = x + (sx + 0.5) / ss
+                    py = y + (sy + 0.5) / ss
+                    if not _in_round(px, py, w, h, r):
+                        continue
+                    if stroke and _in_round(px - stroke, py - stroke, iw, ih, ir):
+                        nf += 1
+                    else:
+                        no += 1
+            nb = n - nf - no
+            cells.append("#%02x%02x%02x" % tuple(
+                (fc[i] * nf + oc[i] * no + bc[i] * nb + n // 2) // n
+                for i in range(3)))
+        rows.append("{" + " ".join(cells) + "}")
+    img = tk.PhotoImage(width=w, height=h)
+    img.put(" ".join(rows))
+    _AA[key] = img
+    return img
+
+
 def round_rect(x1, y1, x2, y2, r=5, **kw):
-    """Rectangle a coins reels (pas le lissage blobby de smooth=True)."""
+    """Rectangle à coins lissés, composé sur le fond réel du bouton."""
     x1, y1, x2, y2 = X(x1), X(y1), X(x2), X(y2)
-    r = int(min(X(r), max(0, (x2 - x1) // 2), max(0, (y2 - y1) // 2)))
-    if r < 2:
-        return cv.create_rectangle(x1, y1, x2, y2, **kw)
-    pts = []
-
-    def arc(cx, cy, a0, a1, n=7):
-        for i in range(n + 1):
-            a = math.radians(a0 + (a1 - a0) * i / n)
-            pts.extend((cx + r * math.cos(a), cy + r * math.sin(a)))
-
-    arc(x2 - r, y1 + r, -90, 0)
-    arc(x2 - r, y2 - r, 0, 90)
-    arc(x1 + r, y2 - r, 90, 180)
-    arc(x1 + r, y1 + r, 180, 270)
-    return cv.create_polygon(pts, **kw)
+    w, h = x2 - x1, y2 - y1
+    rad = int(min(X(r), max(0, w // 2), max(0, h // 2)))
+    fill = kw.get("fill") or C["bg"]
+    outline = kw.get("outline") or fill
+    stroke = int(kw.get("width") or 0)
+    backdrop = kw.get("backdrop") or C["bg"]
+    if w < 2 or h < 2 or rad < 2:
+        return cv.create_rectangle(x1, y1, x2, y2, fill=fill, outline=outline, width=stroke)
+    img = _aa_chip(w, h, rad, fill, outline, stroke, backdrop)
+    return cv.create_image(x1, y1, image=img, anchor="nw")
 
 
-def chip(store, key, x1, y1, x2, y2, label, kind="ghost", fg=None, size=8):
+def chip(store, key, x1, y1, x2, y2, label, kind="ghost", fg=None, size=8, backdrop=None):
     """Puce cliquable. kind: ghost | solid | soft. fg force la couleur du texte."""
     store[key] = (x1, y1, x2, y2)
     hot = HOVER["btn"] == key
@@ -518,64 +717,73 @@ def chip(store, key, x1, y1, x2, y2, label, kind="ghost", fg=None, size=8):
         fill, col, ol = C["btn_hover"], C["txt"], C["btn_line"]
     else:
         fill, col, ol = C["btn"], C["txt"], C["btn_line"]
-    round_rect(x1, y1, x2, y2, 6, fill=fill, outline=ol, width=1)
+    round_rect(x1, y1, x2, y2, 6, fill=fill, outline=ol, width=1, backdrop=backdrop or C["bg"])
     return cv.create_text(X((x1 + x2) / 2), X((y1 + y2) / 2), text=label,
                           fill=fg or col, font=fnt(size, True))
 
 
-def _small_monitor(fn):
-    """Appelle fn(dxva2, handle) sur l'écran 480×320. None si absent."""
-    user32 = ctypes.windll.user32
-    dxva2 = ctypes.windll.dxva2
+class _MON_RECT(ctypes.Structure):
+    _fields_ = [("left", wintypes.LONG), ("top", wintypes.LONG),
+                ("right", wintypes.LONG), ("bottom", wintypes.LONG)]
 
-    class RECT(ctypes.Structure):
-        _fields_ = [("left", wintypes.LONG), ("top", wintypes.LONG),
-                    ("right", wintypes.LONG), ("bottom", wintypes.LONG)]
 
-    class PHYSICAL_MONITOR(ctypes.Structure):
-        _fields_ = [("hPhysicalMonitor", wintypes.HANDLE),
-                    ("szPhysicalMonitorDescription", wintypes.WCHAR * 128)]
+class _PHYSICAL_MONITOR(ctypes.Structure):
+    _fields_ = [("hPhysicalMonitor", wintypes.HANDLE),
+                ("szPhysicalMonitorDescription", wintypes.WCHAR * 128)]
 
+
+_MON_CB_T = ctypes.WINFUNCTYPE(
+    wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
+    ctypes.POINTER(_MON_RECT), wintypes.LPARAM)
+
+_dxva2 = ctypes.windll.dxva2
+_dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR.argtypes = [
+    wintypes.HMONITOR, ctypes.POINTER(wintypes.DWORD)]
+_dxva2.GetPhysicalMonitorsFromHMONITOR.argtypes = [
+    wintypes.HMONITOR, wintypes.DWORD, ctypes.POINTER(_PHYSICAL_MONITOR)]
+_dxva2.DestroyPhysicalMonitors.argtypes = [
+    wintypes.DWORD, ctypes.POINTER(_PHYSICAL_MONITOR)]
+_dxva2.GetVCPFeatureAndVCPFeatureReply.argtypes = [
+    wintypes.HANDLE, wintypes.BYTE,
+    ctypes.POINTER(wintypes.DWORD), ctypes.POINTER(wintypes.DWORD),
+    ctypes.POINTER(wintypes.DWORD)]
+_dxva2.GetVCPFeatureAndVCPFeatureReply.restype = wintypes.BOOL
+_dxva2.SetMonitorBrightness.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+_dxva2.SetMonitorBrightness.restype = wintypes.BOOL
+_dxva2.SetVCPFeature.argtypes = [
+    wintypes.HANDLE, wintypes.BYTE, wintypes.DWORD]
+_dxva2.SetVCPFeature.restype = wintypes.BOOL
+
+
+def all_monitors():
+    """Retourne [(hmon, x, y, w, h)] pour chaque moniteur."""
     found = []
 
     def cb(hmon, hdc, rect, data):
         r = rect.contents
-        found.append((hmon, r.right - r.left, r.bottom - r.top))
+        found.append((hmon, r.left, r.top, r.right - r.left, r.bottom - r.top))
         return True
 
-    cb_t = ctypes.WINFUNCTYPE(
-        wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
-        ctypes.POINTER(RECT), wintypes.LPARAM)
-    user32.EnumDisplayMonitors(None, None, cb_t(cb), 0)
-    dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR.argtypes = [
-        wintypes.HMONITOR, ctypes.POINTER(wintypes.DWORD)]
-    dxva2.GetPhysicalMonitorsFromHMONITOR.argtypes = [
-        wintypes.HMONITOR, wintypes.DWORD, ctypes.POINTER(PHYSICAL_MONITOR)]
-    dxva2.DestroyPhysicalMonitors.argtypes = [
-        wintypes.DWORD, ctypes.POINTER(PHYSICAL_MONITOR)]
-    dxva2.GetVCPFeatureAndVCPFeatureReply.argtypes = [
-        wintypes.HANDLE, wintypes.BYTE,
-        ctypes.POINTER(wintypes.DWORD), ctypes.POINTER(wintypes.DWORD),
-        ctypes.POINTER(wintypes.DWORD)]
-    dxva2.GetVCPFeatureAndVCPFeatureReply.restype = wintypes.BOOL
-    dxva2.SetMonitorBrightness.argtypes = [wintypes.HANDLE, wintypes.DWORD]
-    dxva2.SetMonitorBrightness.restype = wintypes.BOOL
-    dxva2.SetVCPFeature.argtypes = [
-        wintypes.HANDLE, wintypes.BYTE, wintypes.DWORD]
-    dxva2.SetVCPFeature.restype = wintypes.BOOL
-    for hmon, w, h in found:
-        if (w, h) != (480, 320):
+    cb_ref = _MON_CB_T(cb)
+    _user32.EnumDisplayMonitors(None, None, cb_ref, 0)
+    return found
+
+
+def _small_monitor(fn):
+    """Appelle fn(dxva2, handle) sur l'écran 480×320. None si absent."""
+    for hmon, _x, _y, w, h in all_monitors():
+        if (w, h) != (PANEL_W, PANEL_H):
             continue
         n = wintypes.DWORD()
-        if not dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, ctypes.byref(n)) or not n.value:
+        if not _dxva2.GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, ctypes.byref(n)) or not n.value:
             return None
-        arr = (PHYSICAL_MONITOR * n.value)()
-        if not dxva2.GetPhysicalMonitorsFromHMONITOR(hmon, n.value, arr):
+        arr = (_PHYSICAL_MONITOR * n.value)()
+        if not _dxva2.GetPhysicalMonitorsFromHMONITOR(hmon, n.value, arr):
             return None
         try:
-            return fn(dxva2, arr[0].hPhysicalMonitor)
+            return fn(_dxva2, arr[0].hPhysicalMonitor)
         finally:
-            dxva2.DestroyPhysicalMonitors(n.value, arr)
+            _dxva2.DestroyPhysicalMonitors(n.value, arr)
     return None
 
 
@@ -654,13 +862,22 @@ def follow_bright():
     def done():
         global bright_sel
         if time.time() >= bright_hold and pct is not None:
+            match_i = None
             for i, v in enumerate(BRIGHT_LEVELS):
-                if v == pct and bright_sel != i:
-                    bright_sel = i
-                    paint()
+                if v == pct:
+                    match_i = i
                     break
+            if match_i is None:
+                best_i = min(range(len(BRIGHT_LEVELS)),
+                             key=lambda i: abs(BRIGHT_LEVELS[i] - pct))
+                if abs(BRIGHT_LEVELS[best_i] - pct) <= 2:
+                    match_i = best_i
+            if match_i is not None and bright_sel != match_i:
+                bright_sel = match_i
+                if not mini:
+                    paint()
         try:
-            root.after(1500, lambda: _exec.submit(follow_bright))
+            root.after(400, lambda: _exec.submit(follow_bright))
         except Exception:
             pass
     try:
@@ -679,14 +896,14 @@ def draw_title():
         cv.create_text(X(W - 12), X(TITLE_H / 2), anchor="e",
                        text="Cliquer pour rouvrir", fill=C["mut"], font=fnt(8))
         return
-    chip(HDR, "options", 8, 6, 104, 28, "Options")
+    chip(HDR, "options", 8, 6, 104, 28, "Options", backdrop=C["header"])
     # paire Clair / Sombre : la pastille pleine est le theme actif
     chip(HDR, "theme_light", W - 156, 6, W - 84, 28, "Clair",
          "solid" if appearance == "light" else "ghost",
-         fg=None if appearance == "light" else C["mut"])
+         fg=None if appearance == "light" else C["mut"], backdrop=C["header"])
     chip(HDR, "theme_dark", W - 80, 6, W - 8, 28, "Sombre",
          "solid" if appearance == "dark" else "ghost",
-         fg=None if appearance == "dark" else C["mut"])
+         fg=None if appearance == "dark" else C["mut"], backdrop=C["header"])
 
 
 THUMBS = []
@@ -715,17 +932,26 @@ def load_thumbs():
         THUMBS.append(img)
 
 
-def cell_geom(i):
-    c, r = i % COLS, i // COLS
+def page_count():
+    return max(1, (len(SCHEMES) + PAGE - 1) // PAGE)
+
+
+def cell_geom(slot):
+    """slot : position dans la page, 0..11."""
+    c, r = slot % COLS, slot // COLS
     x1 = PAD + c * (THUMB_W + GAP)
     y1 = GRID_Y0 + r * (THUMB_H + GAP)
     return (x1, y1, x1 + THUMB_W, y1 + THUMB_H)
 
 
 def cell_at(lx, ly):
-    for i in range(len(SCHEMES)):
-        if hit(lx, ly, cell_geom(i)):
-            return i
+    start = page * PAGE
+    for slot in range(PAGE):
+        idx = start + slot
+        if idx >= len(SCHEMES):
+            break
+        if hit(lx, ly, cell_geom(slot)):
+            return idx
     return None
 
 
@@ -736,8 +962,10 @@ def draw_rows():
                             "Règle [panel] path dans centre.ini",
                        fill=C["warn"], font=fnt(9), justify="center")
         return
-    for idx, s in enumerate(SCHEMES):
-        x1, y1, x2, y2 = cell_geom(idx)
+    start = page * PAGE
+    for slot, s in enumerate(SCHEMES[start:start + PAGE]):
+        idx = start + slot
+        x1, y1, x2, y2 = cell_geom(slot)
         sel = (idx == SELECTION)
         hot = (not sel) and HOVER["row"] == idx
         img = THUMBS[idx] if idx < len(THUMBS) else None
@@ -746,7 +974,7 @@ def draw_rows():
         else:
             cv.create_rectangle(X(x1), X(y1), X(x2), X(y2), fill=C["card"], outline="")
             cv.create_text(X((x1 + x2) / 2), X((y1 + y2) / 2), text=s["key"],
-                           fill=C["txt"], font=fnt(8, True))
+                           fill=C["txt"], font=fnt(9, True))
         if sel:
             ol, wd = C["accent"], 3
         elif hot:
@@ -755,6 +983,23 @@ def draw_rows():
             ol, wd = C["line"], 1
         cv.create_rectangle(X(x1) + 1, X(y1) + 1, X(x2) - 1, X(y2) - 1,
                             outline=ol, width=wd)
+
+
+def draw_pager():
+    y1, y2 = PAGER_Y, PAGER_Y + PAGER_H
+    n = page_count()
+    for key, x1, x2, label, enabled in (
+            ("page_prev", 8, 168, "Précédent", page > 0),
+            ("page_next", W - 168, W - 8, "Suivant", page < n - 1)):
+        if enabled:
+            chip(BTN, key, x1, y1, x2, y2, label, size=9, backdrop=C["bg"])
+        else:
+            round_rect(x1, y1, x2, y2, 6, fill=C["btn"], outline=C["line"],
+                       width=1, backdrop=C["bg"])
+            cv.create_text(X((x1 + x2) / 2), X((y1 + y2) / 2), text=label,
+                           fill=C["mut"], font=fnt(9, True))
+    cv.create_text(X(W // 2), X((y1 + y2) / 2), text="%d / %d" % (page + 1, n),
+                   fill=C["txt"], font=fnt(9, True))
 
 
 def draw_footer():
@@ -766,9 +1011,9 @@ def draw_footer():
     st["text"] = cv.create_text(X(28), X(sy), anchor="w", text="·",
                                 fill=C["mut"], font=fnt(8))
     by1, by2 = FOOT_Y + 22, FOOT_Y + 54
-    chip(BTN, "stop", 8, by1, 150, by2, "Arrêter", size=9)
-    chip(BTN, "run", 156, by1, W - 156, by2, "Appliquer", "solid", size=9)
-    chip(BTN, "quit", W - 150, by1, W - 8, by2, "Quitter", fg=C["warn"], size=9)
+    chip(BTN, "stop", 8, by1, 150, by2, "Arrêter", size=9, backdrop=C["footer"])
+    chip(BTN, "run", 156, by1, W - 156, by2, "Appliquer", "solid", size=9, backdrop=C["footer"])
+    chip(BTN, "quit", W - 150, by1, W - 8, by2, "Quitter", fg=C["warn"], size=9, backdrop=C["footer"])
     cv.create_text(X(W - 12), X(sy), anchor="e", text="v" + VERSION,
                    fill=C["mut"], font=fnt(8))
     update_status()
@@ -780,7 +1025,7 @@ def update_status():
             return
         tkey = read_panel_theme_key() if PANEL_DIR else "?"
         cur = match_theme(tkey, SCHEMES)
-        running = bool(panel_running())
+        running = bool(_panel_running_cache)
         if flash:
             txt, role = flash
             col = C["accent"] if role == "ok" else C["warn"]
@@ -788,7 +1033,7 @@ def update_status():
             cv.itemconfig(st["dot"], fill=col)
         else:
             applied = cur["key"] if cur else "?"
-            if preview_key and preview_key != applied:
+            if running and preview_key and preview_key != applied:
                 cv.itemconfig(st["text"],
                               text="Prévisualisation · " + preview_key,
                               fill=C["accent"])
@@ -807,30 +1052,35 @@ def update_status():
 def play_apply_sound():
     """Retour sonore quand Appliquer a enregistré le thème."""
     try:
-        # SND_ASYNC | SND_NODEFAULT | SND_FILENAME
-        ctypes.windll.winmm.PlaySoundW(APPLY_WAV, None, 0x00020003)
+        if os.path.isfile(APPLY_WAV):
+            # SND_ASYNC | SND_NODEFAULT | SND_FILENAME
+            ctypes.windll.winmm.PlaySoundW(APPLY_WAV, None, 0x00020003)
     except Exception:
         pass
 
 
+_flash_seq = 0
+
+
 def show_flash(txt, color="warn", delay=3200):
     """color : 'ok' ou 'warn' (resolu dans la palette au moment du dessin)."""
-    global flash
+    global flash, _flash_seq
     role = "ok" if color == "ok" else "warn"
     if os.environ.get("CTRACE"):
         print("[flash]", txt, flush=True)
     flash = (txt, role)
+    _flash_seq += 1
+    seq = _flash_seq
     update_status()
 
-    def clear(entry=flash):
-        time.sleep(delay / 1000.0)
-        if globals()["flash"] == entry:
+    def clear():
+        if _flash_seq == seq:
             globals()["flash"] = None
-            try:
-                root.after(0, update_status)
-            except Exception:
-                pass
-    threading.Thread(target=clear, daemon=True).start()
+            update_status()
+    try:
+        root.after(delay, clear)
+    except Exception:
+        pass
 
 
 def paint():
@@ -848,6 +1098,7 @@ def paint():
         draw_title()
         draw_bright()
         draw_rows()
+        draw_pager()
         draw_footer()
     cv.create_rectangle(1, 1, X(W) - 1, hpx - 1, outline=C["line"], width=1)
     draw_options()
@@ -857,18 +1108,28 @@ def render():
     hpx = (TITLE_H if mini else H) * SCALE
     cv.configure(width=X(W), height=hpx, bg=C["bg"])
     root.configure(bg=C["bg"])
-    root.geometry("%dx%d+%d+%d" % (X(W), hpx, POS[0], POS[1]))
+    if root.winfo_width() != X(W) or root.winfo_height() != hpx:
+        root.geometry("%dx%d" % (X(W), hpx))
     paint()
 
 
 # ---------- actions ----------
 def act(key, autohide=True):
-    global last_launch, preview_key
+    global last_launch, preview_key, _panel_running_cache
     if key == "quit":
         on_close()
         return
+    if key in ("page_prev", "page_next"):
+        turn_page(-1 if key == "page_prev" else 1)
+        return
     if key == "stop":
-        n = stop_panel_async(lambda: show_flash("panel arrêté", "ok"))
+        preview_key = None
+
+        def _stopped(ok):
+            show_flash("panel arrêté" if ok else "arrêt refusé (droits admin)",
+                       "ok" if ok else "warn")
+
+        n = stop_panel_async(_stopped)
         show_flash(("arrêt du panel (%d proc.)" % n) if n
                    else "aucun panel actif", "warn")
         return
@@ -903,6 +1164,7 @@ def act(key, autohide=True):
         running = panel_running()
         if running and hot:
             preview_key = None
+            _panel_running_cache = True
             play_apply_sound()
             show_flash("thème appliqué · " + sel["key"], "ok")
             return
@@ -914,12 +1176,14 @@ def act(key, autohide=True):
                 pass
         # chemin lent : lancement/relance du panel (avec anti-double-clic)
         if time.time() - last_launch < 2.0:
+            preview_key = None
             show_flash("sélection · " + sel["key"], "ok")
             return
         last_launch = time.time()
         target = panel_launch_target() or (None, None)
         running = panel_running()
         if running:
+            send_panel_cmd("quit")
             for p in running:
                 try:
                     p.terminate()
@@ -928,7 +1192,10 @@ def act(key, autohide=True):
             show_flash("relance · thème " + sel["key"] + " ...", "ok")
 
             def delayed(target=target, sel=sel):
-                time.sleep(1.2)
+                for _ in range(6):
+                    time.sleep(0.25)
+                    if not panel_running():
+                        break
                 for p in panel_running():
                     try:
                         p.kill()
@@ -941,10 +1208,11 @@ def act(key, autohide=True):
 
 
 def _start(target, sel, autohide=True):
-    global preview_key
+    global preview_key, _panel_running_cache
     ok, err = launch_panel(True, target)
     if ok:
         preview_key = None
+        _panel_running_cache = True
         play_apply_sound()
         show_flash("thème appliqué · " + sel["key"], "ok")
     else:
@@ -953,7 +1221,7 @@ def _start(target, sel, autohide=True):
 
 def preview_theme(sel):
     """Affiche le thème sur le panel. config.ini n'est pas modifié."""
-    global preview_key, last_launch
+    global preview_key, last_launch, _panel_running_cache
     preview_key = sel["key"]
     prob = panel_problem()
     if prob:
@@ -975,12 +1243,21 @@ def preview_theme(sel):
     last_launch = time.time()
     target = panel_launch_target()
     if not target:
+        try:
+            os.remove(cmdp)
+        except Exception:
+            pass
         show_flash("⚠ lancement impossible", "warn")
         return
     ok, err = launch_panel(True, target)
     if ok:
+        _panel_running_cache = True
         show_flash("prévisualisation · " + sel["key"], "ok")
     else:
+        try:
+            os.remove(cmdp)
+        except Exception:
+            pass
         show_flash("⚠ " + (err or "lancement impossible"), "warn")
 
 
@@ -988,12 +1265,20 @@ def revert_preview():
     """Ferme le centre : le panel revient au thème enregistré dans config.ini."""
     if not preview_key or not PANEL_DIR:
         return
+    cmdp = os.path.join(PANEL_DIR, "theme_cmd.txt")
+    if not panel_running():
+        try:
+            if os.path.isfile(cmdp):
+                os.remove(cmdp)
+        except Exception:
+            pass
+        return
     applied = match_theme(read_panel_theme_key(), SCHEMES)
     key = applied["key"] if applied else None
     if not key or key == preview_key:
         return
     try:
-        with open(os.path.join(PANEL_DIR, "theme_cmd.txt"), "w", encoding="utf-8") as f:
+        with open(cmdp, "w", encoding="utf-8") as f:
             f.write(key)
     except Exception:
         pass
@@ -1002,7 +1287,20 @@ def revert_preview():
 def on_close():
     revert_preview()
     save_cfg()
-    root.destroy()
+    try:
+        _exec.shutdown(wait=False, cancel_futures=True)
+    except Exception:
+        pass
+    try:
+        if _hmutex:
+            _kernel32.CloseHandle(_hmutex)
+    except Exception:
+        pass
+    try:
+        root.destroy()
+    except Exception:
+        pass
+    os._exit(0)
 
 
 # ---------- events ----------
@@ -1013,7 +1311,7 @@ def hit(x, y, r):
 def on_press(e):
     """Coord logiques : tout le traitement est fait en espace 480x320."""
     lx, ly = e.x / SCALE, e.y / SCALE
-    if opt_open and hit(lx, ly, opt_box):
+    if opt_open and not mini and hit(lx, ly, opt_box):
         for key, rect in opt_rects.items():
             if not hit(lx, ly, rect):
                 continue
@@ -1021,6 +1319,14 @@ def on_press(e):
                 toggle_startup()
             elif key == "close":
                 close_options()
+            elif key.startswith("speed_"):
+                set_update_speed(key[6:])
+            elif key == "mon_center_small":
+                recenter_monitor()
+            elif key == "mon_lock":
+                toggle_panel_lock()
+            elif key == "mon_topmost":
+                toggle_panel_topmost()
             return
         return
     on_options = (not mini) and ly <= TITLE_H and "options" in HDR and hit(lx, ly, HDR["options"])
@@ -1067,7 +1373,7 @@ def on_motion(e):
             cv.configure(cursor="hand2")
         return
     lx, ly = e.x / SCALE, e.y / SCALE
-    if opt_open and hit(lx, ly, opt_box):
+    if opt_open and not mini and hit(lx, ly, opt_box):
         key = None
         for k, rect in opt_rects.items():
             if hit(lx, ly, rect):
@@ -1127,8 +1433,15 @@ def set_appearance(name):
         return
     save_cfg(new_appearance=name)
     use_palette(appearance)
-    close_options()
-    build_menu()
+    render()
+
+
+def turn_page(delta):
+    global page
+    nxt = max(0, min(page_count() - 1, page + delta))
+    if nxt == page:
+        return
+    page = nxt
     render()
 
 
@@ -1136,10 +1449,12 @@ def on_key(e):
     if e.keysym == "Escape" and opt_open:
         close_options()
         return
-    if SCHEMES and e.keysym in ("Up", "Down"):
-        cur = SELECTION if SELECTION is not None else -1
-        globals()["SELECTION"] = int(max(0, min(len(SCHEMES) - 1,
-                                            cur + (1 if e.keysym == "Down" else -1))))
+    if SCHEMES and e.keysym in ("Left", "Right", "Up", "Down"):
+        cur = SELECTION if SELECTION is not None else 0
+        delta = {"Left": -1, "Right": 1, "Up": -COLS, "Down": COLS}[e.keysym]
+        idx = int(max(0, min(len(SCHEMES) - 1, cur + delta)))
+        globals()["SELECTION"] = idx
+        globals()["page"] = idx // PAGE
         render()
     elif e.keysym in ("Return", "KP_Enter"):
         act("run")
@@ -1159,37 +1474,96 @@ def on_release(e):
 
 
 def toggle_mini():
+    close_options()
     save_cfg(new_mini=not mini)
     render()
 
 
-def toggle_lock():
-    save_cfg(set_locked=not locked)
-    root.destroy()
-    if FROZEN:
-        os.execv(sys.executable, [sys.executable])
-    else:
-        os.execv(sys.executable, [sys.executable, os.path.abspath(sys.argv[0])])
-
-
 def poll():
-    if not flash:
-        update_status()
-    root.after(2500, poll)
+    def work():
+        panel_running()
+
+        def done():
+            if not flash:
+                update_status()
+            try:
+                root.after(2500, poll)
+            except Exception:
+                pass
+        try:
+            root.after(0, done)
+        except Exception:
+            pass
+    _exec.submit(work)
 
 
-def recenter_primary():
-    center_on_primary()
-    save_cfg()
-    render()
+def recenter_monitor():
+    """Recentre la fenetre du Moniteur sur le petit ecran (config.ini + commande live)."""
+    if not PANEL_DIR:
+        show_flash("⚠ dossier panel introuvable", "warn")
+        return
+    mons = all_monitors()
+    exact = [m for m in mons if (m[3], m[4]) == (PANEL_W, PANEL_H)]
+    if exact:
+        _hmon, mx, my, mw, mh = exact[0]
+        msg = "moniteur recentré (petit écran)"
+    elif mons:
+        _hmon, mx, my, mw, mh = min(mons, key=lambda m: m[3] * m[4])
+        msg = ("moniteur recentré (plus petit écran)"
+               if len(mons) > 1 else "moniteur recentré (écran principal)")
+    else:
+        pw, ph = primary_size()
+        mx, my, mw, mh = 0, 0, pw, ph
+        msg = "moniteur recentré (écran principal)"
+    tx = mx + (mw - PANEL_W) // 2
+    ty = my + (mh - PANEL_H) // 2
+    if not write_panel_ini({"x": str(tx), "y": str(ty)}):
+        show_flash("⚠ écriture config.ini refusée", "warn")
+        return
+    send_panel_cmd("pos %d %d" % (tx, ty))
+    show_flash(msg, "ok")
+    paint()
 
 
-menu = tk.Menu(root, tearoff=0)
+def toggle_panel_lock():
+    if not PANEL_DIR:
+        show_flash("⚠ dossier panel introuvable", "warn")
+        return
+    want = not opt_state.get("panel_locked", True)
+    if not write_panel_ini({"locked": str(want).lower()}):
+        show_flash("⚠ écriture config.ini refusée", "warn")
+        return
+    opt_state["panel_locked"] = want
+    send_panel_cmd("lock " + ("1" if want else "0"))
+    show_flash("moniteur verrouillé" if want else "moniteur déverrouillé", "ok")
+    paint()
+
+
+def toggle_panel_topmost():
+    if not PANEL_DIR:
+        show_flash("⚠ dossier panel introuvable", "warn")
+        return
+    want = not opt_state.get("panel_topmost", True)
+    if not write_panel_ini({"topmost": str(want).lower()}):
+        show_flash("⚠ écriture config.ini refusée", "warn")
+        return
+    opt_state["panel_topmost"] = want
+    send_panel_cmd("topmost " + ("1" if want else "0"))
+    show_flash("moniteur au premier plan" if want else "moniteur normal", "ok")
+    paint()
+
+
 opt_open = False
 opt_box = (0, 0, 0, 0)
 opt_rects = {}
 opt_hover = None
-opt_state = {"on": False, "busy": False}
+opt_state = {
+    "on": False,
+    "busy": False,
+    "speed": "normal",
+    "panel_locked": True,
+    "panel_topmost": True,
+}
 
 
 def close_options():
@@ -1207,9 +1581,26 @@ def show_options(e):
     if opt_open:
         close_options()
         return
-    opt_state["on"] = panel_startup_enabled()
+    opt_state["speed"] = read_update_speed()
+    opt_state["panel_locked"] = read_panel_bool("locked", True)
+    opt_state["panel_topmost"] = read_panel_bool("topmost", True)
     opt_open = True
     paint()
+
+    def refresh_startup():
+        on = panel_startup_enabled()
+
+        def done():
+            if opt_open and opt_state["on"] != on:
+                opt_state["on"] = on
+                paint()
+            else:
+                opt_state["on"] = on
+        try:
+            root.after(0, done)
+        except Exception:
+            pass
+    _exec.submit(refresh_startup)
 
 
 def toggle_startup():
@@ -1238,66 +1629,99 @@ def toggle_startup():
     _exec.submit(work)
 
 
+def set_update_speed(key):
+    if key == opt_state.get("speed"):
+        return
+    if not write_update_speed(key):
+        show_flash("écriture config.ini refusée", "warn")
+        return
+    opt_state["speed"] = key
+    names = {"high": "élevé", "normal": "normal", "low": "faible", "paused": "en pause"}
+    show_flash("mise à jour · " + names.get(key, key), "ok")
+    paint()
+
+
+def _opt_chip(key, x1, y1, x2, y2, label, kind="ghost", fg=None, size=8, disabled=False):
+    opt_rects[key] = (x1, y1, x2, y2)
+    hot = (opt_hover == key) and not disabled
+    if kind == "solid":
+        fill, col, ol = C["accent"], C["on_accent"], C["accent"]
+    elif hot:
+        fill, col, ol = C["btn_hover"], C["txt"], C["btn_line"]
+    else:
+        fill, col, ol = C["btn"], C["txt"], C["btn_line"]
+    round_rect(x1, y1, x2, y2, 6, fill=fill, outline=ol, width=1,
+               backdrop=C["header"])
+    cv.create_text(X((x1 + x2) / 2), X((y1 + y2) / 2), text=label,
+                   fill=fg or col, font=fnt(size, True))
+
+
 def draw_options():
     """Colle le panneau sous le bouton Options, dans le canvas du centre."""
     global opt_box
     if not opt_open or mini:
         return
-    rect = HDR.get("options")
-    ox = rect[0] if rect else 8
-    oy = (rect[3] + 6) if rect else TITLE_H
-    ow, oh = 236, 80
+    ox, oy = 8, 36
+    ow, oh = W - 16, 218
+    ix, rx = ox + 12, ox + ow - 12
     opt_box = (ox, oy, ox + ow, oy + oh)
     opt_rects.clear()
     cv.create_rectangle(X(ox), X(oy), X(ox + ow), X(oy + oh),
                         fill=C["header"], outline="")
-    cv.create_text(X(ox + 12), X(oy + 16), anchor="w",
-                   text="Lancer le panneau au démarrage",
-                   fill=C["txt"], font=fnt(8))
-    cv.create_text(X(ox + 12), X(oy + 32), anchor="w",
+
+    # Entête
+    cv.create_text(X(ix), X(oy + 21), anchor="w", text="Options",
+                   fill=C["txt"], font=fnt(10, True))
+    _opt_chip("close", rx - 74, oy + 9, rx, oy + 33, "Fermer", "ghost", size=8)
+    cv.create_line(X(ox + 1), X(oy + 40), X(ox + ow - 1), X(oy + 40), fill=C["line"])
+
+    # Section 1 : Démarrage Windows
+    cv.create_text(X(ix), X(oy + 56), anchor="w",
+                   text="Lancer le moniteur au démarrage",
+                   fill=C["txt"], font=fnt(8, True))
+    cv.create_text(X(ix), X(oy + 72), anchor="w",
                    text="Activé" if opt_state["on"] else "Désactivé",
                    fill=C["accent"] if opt_state["on"] else C["mut"],
                    font=fnt(8))
-    by1, by2 = oy + 46, oy + 68
-    bits = (
-        ("toggle", ox + 24, ox + 136,
-         "Désactiver" if opt_state["on"] else "Activer", "solid"),
-        ("close", ox + 144, ox + 224, "Fermer", "ghost"),
-    )
-    for key, x1, x2, label, kind in bits:
-        opt_rects[key] = (x1, by1, x2, by2)
-        hot = opt_hover == key and not opt_state["busy"]
-        if kind == "solid":
-            fill, col, ol = C["accent"], C["on_accent"], C["accent"]
-        elif hot:
-            fill, col, ol = C["btn_hover"], C["txt"], C["btn_line"]
-        else:
-            fill, col, ol = C["btn"], C["txt"], C["btn_line"]
-        round_rect(x1, by1, x2, by2, 6, fill=fill, outline=ol, width=1)
-        cv.create_text(X((x1 + x2) / 2), X((by1 + by2) / 2), text=label,
-                       fill=col, font=fnt(8, True))
+    _opt_chip("toggle", rx - 104, oy + 50, rx, oy + 76,
+              "Désactiver" if opt_state["on"] else "Activer",
+              "solid" if opt_state["on"] else "ghost",
+              size=8, disabled=opt_state["busy"])
+    cv.create_line(X(ix), X(oy + 86), X(rx), X(oy + 86), fill=C["line"])
+
+    # Section 2 : Vitesse de mise à jour
+    cv.create_text(X(ix), X(oy + 102), anchor="w",
+                   text="Vitesse de mise à jour",
+                   fill=C["txt"], font=fnt(9, True))
+    bw, gap = 112, 8
+    x = ix
+    sy1, sy2 = oy + 116, oy + 142
+    current = opt_state.get("speed") or "normal"
+    for key, label, _ms in SPEEDS:
+        x2 = x + bw
+        _opt_chip("speed_" + key, x, sy1, x2, sy2, label,
+                  "solid" if current == key else "ghost", size=8)
+        x = x2 + gap
+    cv.create_line(X(ix), X(oy + 150), X(rx), X(oy + 150), fill=C["line"])
+
+    # Section 3 : Moniteur (480x320)
+    cv.create_text(X(ix), X(oy + 166), anchor="w",
+                   text="Moniteur (480×320)",
+                   fill=C["txt"], font=fnt(9, True))
+    my1, my2 = oy + 180, oy + 206
+    p_lock = opt_state.get("panel_locked", True)
+    p_top = opt_state.get("panel_topmost", True)
+    _opt_chip("mon_center_small", ix, my1, ix + 180, my2,
+              "Recentrer (petit écran)", "ghost", size=8)
+    _opt_chip("mon_lock", ix + 188, my1, ix + 324, my2,
+              "Verrouillé" if p_lock else "Déverrouillé",
+              "solid" if p_lock else "ghost", size=8)
+    _opt_chip("mon_topmost", ix + 332, my1, rx, my2,
+              "Toujours au-dessus",
+              "solid" if p_top else "ghost", size=8)
+
     cv.create_rectangle(X(ox) + 1, X(oy) + 1, X(ox + ow) - 1, X(oy + oh) - 1,
                         outline=C["line"], width=1)
-
-
-def build_menu():
-    menu.delete(0, "end")
-    menu.configure(bg=C["menu_bg"], fg=C["txt"],
-                   activebackground=C["accent"], activeforeground=C["on_accent"],
-                   activeborderwidth=0, bd=0, relief="flat",
-                   font=("Segoe UI", 10))
-    menu.add_command(label="Thème clair", command=lambda: set_appearance("light"))
-    menu.add_command(label="Thème sombre", command=lambda: set_appearance("dark"))
-    menu.add_separator()
-    menu.add_command(label="Verrouiller" if not locked else "Déverrouiller",
-                     command=toggle_lock)
-    menu.add_command(label="Recentrer sur l'écran principal", command=recenter_primary)
-    menu.add_separator()
-    menu.add_command(label="Quitter", command=on_close)
-
-
-def show_menu(e):
-    menu.post(e.x_root, e.y_root)
 
 
 # ---------- demarrage ----------
@@ -1306,6 +1730,8 @@ fit_grid(len(SCHEMES))
 load_thumbs()
 cur = match_theme(read_panel_theme_key() if PANEL_DIR else "1", SCHEMES)
 SELECTION = SCHEMES.index(cur) if cur else None
+if SELECTION is not None:
+    page = SELECTION // PAGE
 sp = saved_pos()
 pw0, ph0 = primary_size()
 if sp and 0 <= sp[0] < pw0 and 0 <= sp[1] < ph0:
@@ -1327,17 +1753,19 @@ cv.bind("<B1-Motion>", on_move)
 cv.bind("<ButtonRelease-1>", on_release)
 cv.bind("<Motion>", on_motion)
 cv.bind("<Leave>", on_leave)
-cv.bind("<Button-3>", show_menu)
-root.bind("<Button-3>", show_menu)
 root.bind("<Alt-F4>", lambda e: on_close())
+root.bind("<Left>", on_key)
+root.bind("<Right>", on_key)
 root.bind("<Up>", on_key)
 root.bind("<Down>", on_key)
 root.bind("<Return>", on_key)
+root.bind("<KP_Enter>", on_key)
 root.bind("<Escape>", on_key)
 root.protocol("WM_DELETE_WINDOW", on_close)
 
-build_menu()
+panel_running()
 render()
+root.deiconify()
 poll()
 _exec.submit(follow_bright)
 root.mainloop()

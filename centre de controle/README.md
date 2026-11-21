@@ -16,7 +16,7 @@ Dézipper en gardant les dossiers côte à côte :
 CentreControle.exe
 _internal\
 ico.ico
-sensor_panel.exe
+Moniteur.exe
 panel_internal\
 sensor_panel.py
 config.ini
@@ -25,8 +25,8 @@ libs\
 themes\<thème>\preview.png
 ```
 
-`CentreControle.exe` reste avec `_internal`. `sensor_panel.exe` reste avec `panel_internal`. Les deux dossiers n’ont pas le même nom, sinon un exe écrase l’autre.
-Sans `centre.ini`, le centre cherche `sensor_panel.exe` dans son propre dossier.
+`CentreControle.exe` reste avec `_internal`. `Moniteur.exe` reste avec `panel_internal`. Les deux dossiers n’ont pas le même nom, sinon un exe écrase l’autre.
+Sans `centre.ini`, le centre cherche `Moniteur.exe` dans son propre dossier.
 Un second lancement ramène la fenêtre déjà ouverte au premier plan.
 
 Le panneau est lancé en administrateur (température CPU Ryzen via LibreHardwareMonitor).
@@ -43,11 +43,10 @@ Avec l’UAC sur « Ne jamais m’avertir », il n’y a pas de fenêtre de conf
 | Quitter | Ferme le centre. |
 | Clair / Sombre | Change l’apparence du centre. |
 | 0 à 5 | Règle la luminosité de l’écran 480×320. |
-| Options | Ouvre le panneau collé à la fenêtre. Un second clic le ferme. |
+| Options | Ouvre le panneau collé à la fenêtre (démarrage, vitesse, moniteur, centre). Un second clic le ferme. |
 | Flèches | Déplacent la sélection, sans l’appliquer. |
 | Entrée | Appliquer. |
 | Glisser la barre de titre | Déplace la fenêtre. La position est mémorisée dans `centre.ini`. |
-| Clic droit | Verrouiller, recentrer sur l’écran principal, quitter. |
 
 Le changement à chaud écrit la clé dans `theme_cmd.txt`. Le panneau l’applique au tick suivant (au plus une seconde) et supprime le fichier. Appliquer écrit aussi `theme =` dans `config.ini`.
 
@@ -70,7 +69,7 @@ Options permet de lancer le panneau à l’ouverture de session Windows. La tâc
 
 ## Thèmes
 
-Treize thèmes. Les neuf premiers sont les thèmes verts d’origine. Les quatre suivants viennent des maquettes en couleurs :
+Vingt et un thèmes. Les neuf premiers sont les thèmes verts d'origine. Les douze suivants viennent des maquettes en couleurs :
 
 | Clé | Nom |
 |---|---|
@@ -87,6 +86,14 @@ Treize thèmes. Les neuf premiers sont les thèmes verts d’origine. Les quatre
 | 11-ambre | Terminal Ambre |
 | 12-minimal | Minimal Mono |
 | 13-neon | Cyber Neon |
+| 14-flux | Flux système |
+| 15-atelier | Atelier |
+| 16-thermo | Thermo |
+| 17-heatmap | Heatmap |
+| 18-spectrum | Spectre |
+| 19-aiguilles | Aiguilles |
+| 20-analytics | Analytics |
+| 21-focus | Focus |
 
 Le centre lit les thèmes dans `sensor_panel.py`, avec exactement :
 
@@ -99,7 +106,7 @@ Quatre espaces avant `desc`. Une clé ne doit pas commencer par le numéro d’u
 
 Les vignettes sont des PNG 480×320 :
 
-- `themes\<clé>\preview.png` pour les treize thèmes
+- `themes\<clé>\preview.png` pour les vingt et un thèmes
 
 ## Sources
 
@@ -111,7 +118,7 @@ centre de controle\
     centre.ini              réglages locaux
     build.bat               recompile les deux exe
     sensor_panel.py         panneau et thèmes
-    sensor_panel.exe        exe du panneau, à côté de panel_internal
+    Moniteur.exe        exe du panneau, à côté de panel_internal
     config.ini              position, thème enregistré
     assets\Fond.png         fond des thèmes verts
     libs\                   LibreHardwareMonitor (température CPU)

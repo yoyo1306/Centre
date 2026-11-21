@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nouveaux thèmes — aperçus 1:1</title>
+<style>
+  :root{
+    --sans:"Segoe UI","Segoe UI Variable Text",system-ui,sans-serif;
+    --mono:Consolas,"Cascadia Mono","Courier New",monospace;
+    --page:#06080b; --text:#e6edf3; --muted:#7c8b99;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 420px at 18% -10%,#0d1b24 0%,rgba(13,27,36,0) 70%),
+      radial-gradient(700px 380px at 92% 0%,#1a130b 0%,rgba(26,19,11,0) 65%),
+      var(--page);
+    color:var(--text); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision;
+  }
+  .page-head{max-width:1128px;margin:0 auto;padding:44px 24px 26px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:#5e7181;text-transform:uppercase}
+  h1{margin:10px 0 8px;font-size:32px;line-height:1.1;font-weight:600;letter-spacing:-.01em}
+  .lead{margin:0;max-width:780px;color:#95a5b3;font-size:14px;line-height:1.6}
+  .lead strong{color:var(--text);font-weight:600}
+  .lead code{font-family:var(--mono);font-size:12px;color:#b7c5d1}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .chip{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:#9fb0be;
+        border:1px solid #1d2b36;background:#0a0f14;padding:5px 8px}
+  .chip b{color:#34d399;font-weight:600}
+  main{padding-bottom:64px}
+  .gallery{max-width:1128px;margin:0 auto;padding:0 24px;display:grid;
+           grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:26px}
+  .card{background:#0b1015;border:1px solid #18232d;padding:16px;display:flex;flex-direction:column;gap:14px}
+  .card-top{display:flex;align-items:flex-start;gap:12px}
+  .num{font-family:var(--mono);font-size:11px;color:#0b1015;background:#e6edf3;padding:4px 7px;line-height:1;flex:none}
+  .card h2{margin:0;font-size:17px;font-weight:600;letter-spacing:.01em}
+  .card .desc{margin:4px 0 0;color:#8fa0ae;font-size:12px;line-height:1.4}
+  .png{margin-left:auto;font-family:var(--mono);font-size:10px;color:#7dd3fc;text-decoration:none;
+       border:1px solid #1d3040;padding:5px 8px;flex:none}
+  .png:hover{color:#e0f2fe;border-color:#3b82f6}
+  .shot{width:480px;height:320px;max-width:100%;overflow:auto;border:1px solid #16212b;background:#000;margin:0 auto}
+  .shot .panel{box-shadow:0 0 0 1px rgba(255,255,255,.02)}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:#8091a0;background:#080d12;
+       border:1px solid #17232d;padding:4px 6px}
+  .note{margin:0;color:#738391;font-size:11.5px;line-height:1.55}
+  .gallery-foot{max-width:1128px;margin:34px auto 0;padding:0 24px;color:#5e7181;font-size:11px;line-height:1.6}
+  .gallery-foot code{font-family:var(--mono);color:#8fa0ae}
+  /* --- panneaux --- */
+  .panel{position:relative;width:480px;height:320px;overflow:hidden;flex:none;
+         font-family:var(--sans);color:var(--text);background:#0b1115}
+  .tx{position:absolute;white-space:nowrap;line-height:1;text-shadow:1px 1px 0 rgba(0,0,0,.88)}
+  .solo, .solo body{width:480px;height:320px;overflow:hidden;background:#000}
+  body.solo .page-head,body.solo .gallery-foot{display:none}
+  body.solo .card-top,body.solo .tags,body.solo .note,body.solo .card{border:0;padding:0;background:none}
+  body.solo main{padding:0;margin:0}
+  body.solo .gallery{padding:0;margin:0;display:block;max-width:none}
+  body.solo .shot{width:480px;height:320px;border:0;overflow:hidden}
+  body.solo .panel{box-shadow:none}
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div class="eyebrow">Centre de contrôle · panneau capteurs</div>
+  <h1>Six nouvelles pistes d’interface</h1>
+  <p class="lead">Aperçus à l’échelle <strong>1:1 (480 × 320)</strong>, dans la continuité des thèmes 10 à 15.
+  Tout est dessinable en <strong>tkinter Canvas</strong> : rectangles, traits, arcs, ovales et texte. Aucune donnée
+  supplémentaire n’est nécessaire — températures, charges et historiques <code>hc/hg/htc/htg</code> suffisent.</p>
+  <div class="chips">
+    <span class="chip">SANS DÉPENDANCE</span>
+    <span class="chip">MAJ 1 HZ</span>
+    <span class="chip">FONDS PLEIN CANVAS</span>
+    <span class="chip">VALEURS SIMULÉES</span>
+  </div>
+</header>
+<main>
+  <section class="gallery" id="gallery"></section>
+  <footer class="gallery-foot">
+    <code>?only=16</code> … <code>?only=21</code> isole un panneau pour la capture.
+    Les noms de thèmes proposés sont <code>16-thermo</code>, <code>17-heatmap</code>, <code>18-spectrum</code>,
+    <code>19-aiguilles</code>, <code>20-analytics</code>, <code>21-focus</code>.
+  </footer>
+</main>
+<script>
+const SANS = 'var(--sans)', MONO = 'var(--mono)';
+const CLOCK = '21:47';
+const CPU_NAME = 'AMD RYZEN 5 7600X';
+const GPU_NAME = 'NVIDIA GEFORCE RTX 5080';
+
+/* ---------- helpers de dessin (équivalents canvas) ---------- */
+const R = (x, y, w, h, fill, stroke = '', sw = 1, extra = '') =>
+  `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${fill};` +
+  (stroke ? `border:${sw}px solid ${stroke};` : '') + extra + `"></div>`;
+
+const L = (x, y, w, color, h = 1, extra = '') =>
+  `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${color};${extra}"></div>`;
+
+const V = (x, y, h, color, w = 1, extra = '') =>
+  `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${color};${extra}"></div>`;
+
+const DOT = (cx, cy, r, fill, stroke = '', sw = 1) =>
+  `<div style="position:absolute;left:${cx - r}px;top:${cy - r}px;width:${2 * r}px;height:${2 * r}px;` +
+  `border-radius:50%;background:${fill};` + (stroke ? `border:${sw}px solid ${stroke};` : '') + `"></div>`;
+
+function T(x, y, text, size, color, o = {}) {
+  const { weight = 400, mono = false, ls = 0, w = null, align = 'left', lh = 1,
+          op = 1, family = null, shadow = true } = o;
+  let left = x;
+  if (w != null) {
+    if (align === 'right') left = x - w;
+    else if (align === 'center') left = x - w / 2;
+  }
+  const pos = w != null
+    ? `left:${left}px;width:${w}px;text-align:${align};overflow:hidden;`
+    : `left:${left}px;`;
+  return `<div class="tx" style="${pos}top:${y}px;font-family:${family || (mono ? MONO : SANS)};` +
+    `font-size:${size}px;font-weight:${weight};color:${color};letter-spacing:${ls}px;` +
+    `line-height:${lh};opacity:${op};` + (shadow ? 'text-shadow:1px 1px 0 rgba(0,0,0,.88);' : 'text-shadow:none;') +
+    `">${text}</div>`;
+}
+
+const bar = (x, y, w, h, frac, color, back = '#1a2730') =>
+  R(x, y, w, h, back) + R(x, y, Math.max(1, w * Math.max(0, Math.min(1, frac))), h, color);
+
+const SVG = (x, y, w, h, inner, vb = null) =>
+  `<svg style="position:absolute;left:${x}px;top:${y}px" width="${w}" height="${h}" ` +
+  `viewBox="${vb || `0 0 ${w} ${h}`}">${inner}</svg>`;
+
+/* ---------- couleurs ---------- */
+function tempUI(t, normal) {
+  if (t == null) return normal;
+  if (t >= 80) return '#fb7185';
+  if (t >= 65) return '#fbbf24';
+  return normal;
+}
+const HEAT_STOPS = [
+  [30, '#0b2a33'], [38, '#0e4f52'], [46, '#0f766e'], [54, '#15803d'],
+  [62, '#65a30d'], [68, '#ca8a04'], [74, '#ea580c'], [80, '#dc2626'], [100, '#7f1d1d']
+];
+function hex2rgb(h) {
+  return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+}
+function mix(a, b, f) {
+  const A = hex2rgb(a), B = hex2rgb(b);
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * f).toString(16).padStart(2, '0')).join('');
+}
+function heat(t) {
+  t = Math.max(30, Math.min(100, t));
+  for (let i = 0; i < HEAT_STOPS.length - 1; i++) {
+    const [t0, c0] = HEAT_STOPS[i], [t1, c1] = HEAT_STOPS[i + 1];
+    if (t <= t1) return mix(c0, c1, (t - t0) / (t1 - t0));
+  }
+  return HEAT_STOPS[HEAT_STOPS.length - 1][1];
+}
+/* ---------- jeux de données simulés ---------- */
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+function series(n, o = {}) {
+  const { base = 50, amp = 4, phase = 0, noise = 1.2, drift = 0,
+          min = 0, max = 100, last = null, spikes = [], seed = 7 } = o;
+  const r = rng(seed);
+  let arr = Array.from({ length: n }, (_, i) => {
+    let v = base + drift * (i / (n - 1))
+      + Math.sin((i + phase) * 0.55) * amp
+      + Math.sin((i + phase) * 0.17 + 1.3) * amp * 0.45
+      + (r() - 0.5) * noise;
+    for (const sp of spikes) v += sp.amp * Math.exp(-Math.pow((i - sp.at) / sp.w, 2));
+    return Math.min(max, Math.max(min, v));
+  });
+  if (last != null) {
+    const d = last - arr[n - 1];
+    arr = arr.map(v => Math.min(max, Math.max(min, v + d)));
+  }
+  return arr;
+}
+const avg = a => a.reduce((s, v) => s + v, 0) / a.length;
+const vmax = a => Math.max(...a);
+const vmin = a => Math.min(...a);
+
+const cpuHeat = series(48, { base: 51, amp: 3.4, noise: 1.8, phase: .6, last: 52.0,
+  min: 30, max: 100, seed: 12, spikes: [{ at: 31, amp: 24, w: 2.2 }, { at: 43, amp: 6, w: 1.6 }] });
+const gpuHeat = series(48, { base: 40.5, amp: 2.2, noise: 1.2, phase: 1.2, last: 41.0,
+  min: 30, max: 100, seed: 21, spikes: [{ at: 35, amp: 11, w: 2.4 }] });
+
+const cpuUse = series(48, { base: 60, amp: 14, noise: 9, last: 76, min: 8, max: 96,
+  seed: 31, spikes: [{ at: 26, amp: 12, w: 2.5 }] });
+const gpuUse = series(48, { base: 30, amp: 10, noise: 6, last: 44, min: 2, max: 80,
+  seed: 41, spikes: [{ at: 30, amp: 8, w: 2.0 }] });
+const cpuSpecT = series(48, { base: 60.5, amp: 2.2, noise: 1.6, min: 40, max: 90, seed: 51 });
+const gpuSpecT = series(48, { base: 48, amp: 2.0, noise: 1.0, min: 35, max: 75, seed: 61 });
+cpuSpecT[45] = 65.2; cpuSpecT[46] = 66.1; cpuSpecT[47] = 67.0;
+gpuSpecT[47] = 50.0;
+
+const cpuAn = series(64, { base: 49, amp: 3.4, noise: 1.4, last: 49.5,
+  seed: 71, spikes: [{ at: 38, amp: 14, w: 2.6 }] });
+const gpuAn = series(64, { base: 40.5, amp: 1.8, noise: .9, last: 40.0,
+  seed: 81, spikes: [{ at: 44, amp: 6, w: 2.4 }] });
+const gpuFocusHist = series(48, { base: 46, amp: 1.6, noise: .8, last: 47.0, seed: 91 });
+
+/* ---------- sparkline / aire ---------- */
+function spark(values, x, y, w, h, lo, hi, color, o = {}) {
+  const { fill = true, avgLine = null, dot = true, width = 2 } = o;
+  const n = values.length;
+  const pts = values.map((v, i) => {
+    const p = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+    return [3 + (n <= 1 ? 0 : i * (w - 6) / (n - 1)), 3 + (h - 6) * (1 - p)];
+  });
+  const poly = pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  let out = '';
+  if (fill) out += `<polygon points="3,${h} ${poly} ${w - 3},${h}" fill="${color}" fill-opacity=".14"/>`;
+  if (avgLine != null) {
+    const p = Math.max(0, Math.min(1, (avgLine - lo) / (hi - lo)));
+    const ay = 3 + (h - 6) * (1 - p);
+    out += `<line x1="3" y1="${ay}" x2="${w - 3}" y2="${ay}" stroke="${color}" stroke-width="1" stroke-dasharray="3 3" opacity=".45"/>`;
+  }
+  out += `<polyline points="${poly}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if (dot) {
+    const p = pts[pts.length - 1];
+    out += `<circle cx="${p[0]}" cy="${p[1]}" r="2.6" fill="${color}" stroke="#0b0f14" stroke-width="1.2"/>`;
+  }
+  return SVG(x, y, w, h, out);
+}
+
+/* ---------- jauges à aiguille ---------- */
+function polar(cx, cy, r, deg) {
+  const a = deg * Math.PI / 180;
+  return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+}
+function arcPath(cx, cy, r, a0, a1) {
+  const [x0, y0] = polar(cx, cy, r, a0), [x1, y1] = polar(cx, cy, r, a1);
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+function gauge(cx, cy, t) {
+  const r = 84, a = -120 + (Math.max(20, Math.min(100, t)) - 20) / 80 * 240;
+  let out = `<path d="${arcPath(cx, cy, r, -120, 120)}" fill="none" stroke="#2a211b" stroke-width="5"/>`;
+  out += `<path d="${arcPath(cx, cy, r, -120, 15)}" fill="none" stroke="#34d399" stroke-opacity=".7" stroke-width="5"/>`;
+  out += `<path d="${arcPath(cx, cy, r, 15, 60)}" fill="none" stroke="#f59e0b" stroke-opacity=".75" stroke-width="5"/>`;
+  out += `<path d="${arcPath(cx, cy, r, 60, 120)}" fill="none" stroke="#ef4444" stroke-opacity=".75" stroke-width="5"/>`;
+  for (let v = 20; v <= 100; v += 10) {
+    const ang = -120 + (v - 20) / 80 * 240;
+    const [x0, y0] = polar(cx, cy, 90, ang), [x1, y1] = polar(cx, cy, 95, ang);
+    out += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#5b4a3a" stroke-width="1"/>`;
+    if (v % 20 === 0) {
+      const [tx, ty] = polar(cx, cy, 103, ang);
+      out += `<text x="${tx.toFixed(1)}" y="${(ty + 2).toFixed(1)}" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="6.5" fill="#8a7a68">${v}</text>`;
+    }
+  }
+  const [nx, ny] = polar(cx, cy, 61, a), [bx, by] = polar(cx, cy, -14, a);
+  out += `<line x1="${bx.toFixed(1)}" y1="${by.toFixed(1)}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#f97316" stroke-width="3" stroke-linecap="round"/>`;
+  out += `<circle cx="${cx}" cy="${cy}" r="7.5" fill="#100d0a" stroke="#f97316" stroke-width="2"/>`;
+  out += `<circle cx="${cx}" cy="${cy}" r="2" fill="#f5f0e8"/>`;
+  return out;
+}
+function timerRing(cx, cy, r, lit, total, color, dim) {
+  let out = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${dim}" stroke-width="1" opacity=".55"/>`;
+  for (let i = 0; i < total; i++) {
+    const a0 = i * 360 / total + 4, a1 = (i + 1) * 360 / total - 4;
+    out += `<path d="${arcPath(cx, cy, r, a0, a1)}" fill="none" stroke="${i < lit ? color : dim}" stroke-width="6"/>`;
+  }
+  return out;
+}
+/* =====================================================================
+   16 — THERMO : deux thermomètres à mercure, seuils vert / ambre / rouge
+   ===================================================================== */
+function thermoBlock(px, name, t, use, accent) {
+  const cx = px + 14, tube = px + 158, inner = tube + 10, bulb = tube + 14;
+  const top = 68, bottom = 250, hgt = bottom - top, foot = 256;
+  const yOf = v => bottom - (v - 20) / 80 * hgt;
+  const ly = yOf(t), y65 = yOf(65), y80 = yOf(80);
+  let mer = '';
+  if (ly < foot) mer += R(inner, Math.max(ly, y65), 8, foot - Math.max(ly, y65), accent);
+  if (ly < y65) mer += R(inner, Math.max(ly, y80), 8, y65 - Math.max(ly, y80), '#fbbf24');
+  if (ly < y80) mer += R(inner, ly, 8, y80 - ly, '#fb7185');
+  let ticks = '';
+  for (let v = 20; v <= 100; v += 10) {
+    const yy = Math.round(yOf(v));
+    const major = v % 20 === 0;
+    ticks += L(tube - (major ? 11 : 5), yy, major ? 9 : 4, major ? '#2a3b45' : '#1c2a33');
+    if (major) ticks += T(tube - 14, yy - 4, String(v), 6.5, '#5f7180', { align: 'right', w: 26 });
+  }
+  return `
+    ${R(px, 38, 224, 272, '#0f181e', '#1e2e38')}
+    ${R(px, 38, 224, 2, accent)}
+    ${T(cx, 51, 'CPU'.replace('CPU', name === CPU_NAME ? 'CPU' : 'GPU'), 9, accent, { weight: 700, ls: 1.5 })}
+    ${T(cx, 65, name, 7.5, '#7c8b99', { w: 132 })}
+    ${T(cx, 80, `${t.toFixed(1)}<span style="font-size:15px;color:#7c8b99"> °C</span>`, 40, '#e6edf3')}
+    ${T(cx, 132, 'CHARGE', 7, '#5f7180', { ls: 1.2 })}
+    ${T(cx, 142, `${use} %`, 18, accent, { weight: 600 })}
+    ${bar(cx, 166, 108, 5, use / 100, accent, '#1a2730')}
+    ${T(cx, 184, 'PLAGE', 7, '#5f7180', { ls: 1.2 })}
+    ${T(cx, 194, '20–100 °C', 8, '#a7b7c4')}
+    ${T(cx, 212, `MIN ${(t - 5.5).toFixed(1)}°`, 7.5, '#5f7180')}
+    ${T(cx, 224, `MAX ${(t + 2.5).toFixed(1)}°`, 7.5, '#5f7180')}
+    ${T(cx, 248, 'SONDE PACKAGE · MAJ 1 S', 6.5, '#3f505c', { ls: .6 })}
+    ${R(tube, 58, 28, 198, '#0a0f13', '#24333d', 1, 'border-radius:14px 14px 0 0;')}
+    ${R(inner, 68, 8, 188, '#0a0f13')}
+    ${R(inner + 1, 68, 1, 188, '#132029')}
+    ${mer}
+    ${R(inner - 1, ly - 1, 10, 2, '#e6edf3', '', 1, 'opacity:.45;')}
+    ${DOT(bulb, 273, 23, '#0a0f13', '#24333d')}
+    ${DOT(bulb, 273, 20, accent)}
+    ${DOT(bulb - 5, 268, 4, '#ffffff', '', 1, 'opacity:.10')}
+    ${ticks}
+  `;
+}
+function build16() {
+  return `<div class="panel" id="p16" style="background:#0b1115">
+    ${L(0, 32, 480, '#0e181e')}
+    ${T(16, 9, 'THERMO', 10, '#93a4b1', { weight: 700, ls: 2 })}
+    ${T(240, 9, 'MERCURE · 20–100 °C', 7.5, '#5f7180', { align: 'center', w: 210 })}
+    ${T(464, 9, CLOCK, 8, '#5f7180', { mono: true, align: 'right', w: 60 })}
+    ${L(12, 28, 456, '#1b2a33')}
+    ${thermoBlock(10, CPU_NAME, 49.5, 18, '#34d399')}
+    ${thermoBlock(246, GPU_NAME, 40.0, 3, '#38bdf8')}
+  </div>`;
+}
+
+/* =====================================================================
+   17 — HEATMAP : 48 cellules par sonde, une par seconde
+   ===================================================================== */
+function heatRow(values, x, y, w, h) {
+  let cells = '';
+  values.forEach((v, i) => {
+    const now = i === values.length - 1;
+    cells += `<div style="background:${heat(v)};${now ? 'outline:1px solid #fafaf9;outline-offset:-1px;' : ''}"></div>`;
+  });
+  return `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;` +
+    `display:grid;grid-template-columns:repeat(48,1fr);gap:1px">${cells}</div>`;
+}
+function build17() {
+  const c = cpuHeat[47], g = gpuHeat[47];
+  let grad = '';
+  for (let i = 0; i < 12; i++) grad += R(16 + i * 19.5, 258, 19.5, 8, heat(30 + i * 70 / 11));
+  return `<div class="panel" id="p17" style="background:#0a0908">
+    ${L(0, 32, 480, '#14110f')}
+    ${T(16, 9, 'HEATMAP', 10, '#fafaf9', { weight: 700, ls: 2 })}
+    ${T(240, 9, 'TEMPÉRATURE · 48 SECONDES', 7.5, '#78716c', { align: 'center', w: 230 })}
+    ${T(464, 9, CLOCK, 8, '#78716c', { mono: true, align: 'right', w: 60 })}
+    ${L(16, 30, 448, '#221d18')}
+    ${V(240, 42, 88, '#221d18')}
+    ${T(16, 40, 'CPU', 8, '#fb923c', { weight: 700, ls: 1.5 })}
+    ${T(16, 52, CPU_NAME, 7, '#78716c', { w: 214 })}
+    ${T(16, 64, `${c.toFixed(1)}<span style="font-size:14px;color:#78716c"> °C</span>`, 46, '#fafaf9')}
+    ${T(16, 114, 'PACKAGE · ACTUEL', 6.5, '#57534e', { ls: .8 })}
+    ${T(248, 40, 'GPU', 8, '#60a5fa', { weight: 700, ls: 1.5 })}
+    ${T(248, 52, GPU_NAME, 7, '#78716c', { w: 214 })}
+    ${T(248, 64, `${g.toFixed(1)}<span style="font-size:14px;color:#78716c"> °C</span>`, 46, '#fafaf9')}
+    ${T(248, 114, 'CORE · ACTUEL', 6.5, '#57534e', { ls: .8 })}
+    ${T(58, 142, '−48 S', 6.5, '#57534e', { mono: true })}
+    ${T(261, 142, '−24 S', 6.5, '#57534e', { mono: true, align: 'center', w: 60 })}
+    ${T(464, 142, 'MAINT.', 6.5, '#57534e', { mono: true, align: 'right', w: 60 })}
+    ${T(16, 158, 'CPU', 7.5, '#fb923c', { weight: 700 })}
+    ${T(16, 170, `${c.toFixed(1)}°`, 7, '#a8a29e')}
+    ${T(16, 200, 'GPU', 7.5, '#60a5fa', { weight: 700 })}
+    ${T(16, 212, `${g.toFixed(1)}°`, 7, '#a8a29e')}
+    ${heatRow(cpuHeat, 58, 156, 406, 34)}
+    ${heatRow(gpuHeat, 58, 198, 406, 34)}
+    ${T(16, 246, 'TEMPÉRATURE', 6.5, '#57534e', { ls: 1.2 })}
+    ${grad}
+    ${T(16, 270, '30', 6.5, '#78716c', { mono: true })}
+    ${T(100, 270, '55', 6.5, '#78716c', { mono: true, align: 'center', w: 24 })}
+    ${T(183, 270, '80', 6.5, '#78716c', { mono: true, align: 'center', w: 24 })}
+    ${T(250, 270, '100', 6.5, '#78716c', { mono: true, align: 'right', w: 24 })}
+    ${T(464, 246, 'CELLULE = 1 S', 6.5, '#57534e', { align: 'right', w: 160 })}
+    ${T(464, 258, 'SEUILS 65° / 80°', 6.5, '#a8a29e', { align: 'right', w: 160 })}
+    ${T(464, 270, '48 POINTS', 6.5, '#57534e', { align: 'right', w: 160 })}
+    ${L(16, 292, 448, '#221d18')}
+    ${T(16, 300, 'RAFRAÎCHISSEMENT 1 HZ · HISTORIQUE 48 S', 6.5, '#57534e')}
+    ${T(464, 300, 'SOURCE LHM / NVML', 6.5, '#57534e', { align: 'right', w: 170 })}
+  </div>`;
+}
+/* =====================================================================
+   18 — SPECTRE : VU-mètre symétrique, hauteur = charge, couleur = temp.
+   ===================================================================== */
+function build18() {
+  const c = cpuSpecT[47], g = gpuSpecT[47], cu = cpuUse[47], gu = gpuUse[47];
+  const x0 = 160, total = 304, gap = 1, colW = (total - 47 * gap) / 48;
+  let bars = '';
+  for (let i = 0; i < 48; i++) {
+    const x = x0 + i * (colW + gap);
+    const hC = Math.max(1, cpuUse[i] / 100 * 112);
+    const hG = Math.max(1, gpuUse[i] / 100 * 80);
+    bars += R(x, 164 - hC, colW, hC, tempUI(cpuSpecT[i], '#22d3ee'));
+    bars += R(x, 164 - hC - 1, colW, 1, '#ffffff', '', 1, 'opacity:.16;');
+    bars += R(x, 165, colW, hG, tempUI(gpuSpecT[i], '#818cf8'));
+    bars += R(x, 165, colW, 1, '#ffffff', '', 1, 'opacity:.12;');
+  }
+  return `<div class="panel" id="p18" style="background:#060a14">
+    ${L(16, 30, 448, '#101a2e')}
+    ${T(16, 9, 'SPECTRE', 10, '#22d3ee', { weight: 700, ls: 2 })}
+    ${T(240, 9, '48 S · HAUTEUR = CHARGE · COULEUR = TEMP.', 7, '#52627a', { align: 'center', w: 310 })}
+    ${T(464, 9, CLOCK, 8, '#52627a', { mono: true, align: 'right', w: 60 })}
+    ${V(151, 38, 266, '#0e1830')}
+    ${T(16, 44, 'CPU', 9, '#22d3ee', { weight: 700, ls: 1.5 })}
+    ${T(16, 56, CPU_NAME, 7, '#52627a', { w: 128 })}
+    ${T(16, 68, `${c.toFixed(1)}<span style="font-size:14px;color:#52627a"> °C</span>`, 38, tempUI(c, '#34d399'))}
+    ${T(16, 112, 'CHARGE', 6.5, '#3f5068', { ls: 1.2 })}
+    ${T(16, 122, `${Math.round(cu)} %`, 18, '#22d3ee', { weight: 600 })}
+    ${bar(16, 148, 128, 5, cu / 100, '#22d3ee', '#0f1b2d')}
+    ${T(16, 158, 'PACKAGE · 4.9 GHz', 6.5, '#3f5068')}
+    ${L(16, 180, 128, '#0f1b2d')}
+    ${T(16, 190, 'GPU', 9, '#818cf8', { weight: 700, ls: 1.5 })}
+    ${T(16, 202, GPU_NAME, 7, '#52627a', { w: 128 })}
+    ${T(16, 214, `${g.toFixed(1)}<span style="font-size:14px;color:#52627a"> °C</span>`, 38, tempUI(g, '#818cf8'))}
+    ${T(16, 258, 'CHARGE', 6.5, '#3f5068', { ls: 1.2 })}
+    ${T(16, 268, `${Math.round(gu)} %`, 18, '#818cf8', { weight: 600 })}
+    ${bar(16, 294, 128, 5, gu / 100, '#818cf8', '#0f1b2d')}
+    ${T(16, 304, 'CORE · 2.7 GHz', 6.5, '#3f5068')}
+    ${L(160, 52, 304, '#0c1626')}
+    ${L(160, 108, 304, '#0c1626')}
+    ${L(160, 136, 304, '#0a1220')}
+    ${L(160, 204, 304, '#0a1220')}
+    ${L(160, 244, 304, '#0c1626')}
+    ${L(160, 164, 304, '#1e293b')}
+    ${bars}
+    ${T(464, 42, 'CPU ↑', 6.5, '#22d3ee', { align: 'right', w: 60 })}
+    ${T(464, 278, 'GPU ↓', 6.5, '#818cf8', { align: 'right', w: 60 })}
+    ${T(160, 304, '−48 S', 6.5, '#334155', { mono: true })}
+    ${T(464, 304, 'MAINT.', 6.5, '#334155', { mono: true, align: 'right', w: 60 })}
+  </div>`;
+}
+
+/* =====================================================================
+   19 — AIGUILLES : deux compteurs à aiguille, zones de seuil sur l'arc
+   ===================================================================== */
+function needleBlock(cx, name, label, t, use, accent) {
+  return `
+    ${T(cx, 30, label, 9, accent, { align: 'center', w: 100, weight: 700, ls: 1.5 })}
+    ${T(cx, 42, name, 7.5, '#8a7a68', { align: 'center', w: 215 })}
+    ${T(cx, 236, `${t.toFixed(1)}<span style="font-size:12px;color:#8a7a68"> °C</span>`, 30, '#f5f0e8', { align: 'center', w: 150 })}
+    ${T(cx, 272, 'CHARGE', 6.5, '#8a7a68', { align: 'center', w: 100, ls: 1.2 })}
+    ${T(cx, 282, `${use} %`, 14, accent, { align: 'center', w: 100, weight: 600 })}
+    ${bar(cx - 60, 300, 120, 4, use / 100, accent, '#2a211b')}
+  `;
+}
+function build19() {
+  let gauges = '';
+  gauges += gauge(120, 160, 49.5);
+  gauges += gauge(360, 160, 40.0);
+  return `<div class="panel" id="p19" style="background:#100d0a">
+    ${L(16, 28, 448, '#2a211b')}
+    ${V(240, 34, 272, '#1a1512')}
+    ${T(16, 9, 'AIGUILLES', 10, '#f59e0b', { weight: 700, ls: 2 })}
+    ${T(240, 9, 'TEMPÉRATURE · 20–100 °C', 7.5, '#8a7a68', { align: 'center', w: 220 })}
+    ${T(464, 9, CLOCK, 8, '#8a7a68', { mono: true, align: 'right', w: 60 })}
+    ${SVG(0, 0, 480, 320, gauges, '0 0 480 320')}
+    ${needleBlock(120, CPU_NAME, 'CPU', 49.5, 18, '#f59e0b')}
+    ${needleBlock(360, GPU_NAME, 'GPU', 40.0, 3, '#f59e0b')}
+  </div>`;
+}
+/* =====================================================================
+   20 — ANALYTICS : fiche de synthèse 5 min (actuel, moyenne, pic, tendance)
+   ===================================================================== */
+function analyticsCard(y, label, name, values, accent, usage, freq, power, lo, hi) {
+  const last = values[values.length - 1], a = avg(values), pk = vmax(values);
+  const delta = last - a;
+  return `
+    ${R(10, y, 460, 130, '#111821', '#243244')}
+    ${R(10, y, 3, 130, accent)}
+    ${T(18, y + 8, label, 9, accent, { weight: 700, ls: 1.2 })}
+    ${T(46, y + 8, name, 8, '#7c8b99', { w: 200 })}
+    ${T(456, y + 8, '5 MIN', 6.5, '#5f7180', { align: 'right', w: 50 })}
+    ${T(18, y + 22, `${last.toFixed(1)}<span style="font-size:14px;color:#7c8b99"> °C</span>`, 38, '#e6edf3')}
+    ${T(132, y + 48, 'MOYENNE', 6.5, '#5f7180', { ls: 1 })}
+    ${T(132, y + 58, `${a.toFixed(1)}°`, 14, '#e6edf3')}
+    ${T(198, y + 48, 'PIC', 6.5, '#5f7180', { ls: 1 })}
+    ${T(198, y + 58, `${pk.toFixed(1)}°`, 14, '#fbbf24')}
+    ${T(18, y + 78, `TENDANCE ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}° VS MOY`, 7.5,
+        delta <= 0 ? '#34d399' : '#fbbf24')}
+    ${T(18, y + 92, `CHARGE ${usage} % · ${freq} · ${power}`, 7.5, '#7c8b99')}
+    ${bar(18, y + 112, 438, 4, usage / 100, accent, '#1c2630')}
+    ${R(262, y + 22, 194, 62, '#0a1119')}
+    ${spark(values, 264, y + 24, 190, 58, lo, hi, accent, { avgLine: a })}
+  `;
+}
+function build20() {
+  return `<div class="panel" id="p20" style="background:#0b0f14">
+    ${L(16, 30, 448, '#1e293b')}
+    ${T(16, 9, 'ANALYTICS', 10, '#38bdf8', { weight: 700, ls: 2 })}
+    ${T(240, 9, 'FENÊTRE 5 MIN · 300 POINTS', 7.5, '#64748b', { align: 'center', w: 240 })}
+    ${T(464, 9, CLOCK, 8, '#64748b', { mono: true, align: 'right', w: 60 })}
+    ${analyticsCard(36, 'CPU', CPU_NAME, cpuAn, '#38bdf8', 18, '4.9 GHz', '65 W', 40, 70)}
+    ${analyticsCard(174, 'GPU', GPU_NAME, gpuAn, '#a78bfa', 3, '2.7 GHz', '280 W', 34, 54)}
+    ${L(16, 306, 448, '#1e293b')}
+    ${T(16, 310, 'ÉCHANTILLON 1 S · MOYENNE / PIC CALCULÉES SUR L’HISTORIQUE', 6.5, '#52627a')}
+    ${T(464, 310, 'SEUILS 65° / 80°', 6.5, '#52627a', { align: 'right', w: 160 })}
+  </div>`;
+}
+
+/* =====================================================================
+   21 — FOCUS : un capteur en vedette, bascule auto + anneau de compte à rebours
+   ===================================================================== */
+function build21() {
+  return `<div class="panel" id="p21" style="background:#07090d">
+    ${V(60, 0, 320, '#0a0f16')}
+    ${V(180, 0, 320, '#0a0f16')}
+    ${V(300, 0, 320, '#0a0f16')}
+    ${V(420, 0, 320, '#0a0f16')}
+    ${L(0, 80, 480, '#0a0f16')}
+    ${L(0, 160, 480, '#0a0f16')}
+    ${L(0, 240, 480, '#0a0f16')}
+    ${L(16, 28, 448, '#16202a')}
+    ${T(16, 9, 'FOCUS', 10, '#4ade80', { weight: 700, ls: 2 })}
+    ${T(240, 9, 'BASCULE AUTOMATIQUE · 10 S', 7, '#5b6675', { align: 'center', w: 230 })}
+    ${T(464, 9, CLOCK, 8, '#5b6675', { mono: true, align: 'right', w: 60 })}
+    ${T(16, 40, 'CPU', 10, '#4ade80', { weight: 700, ls: 1.5 })}
+    ${T(52, 41, 'PACKAGE', 6.5, '#5b6675', { ls: 1 })}
+    ${T(16, 54, CPU_NAME, 7.5, '#8a94a6', { w: 270 })}
+    ${T(16, 64, '63.0<span style="font-size:20px;color:#7c8b99"> °C</span>', 80, '#e6edf3')}
+    ${T(16, 156, 'CHARGE', 6.5, '#5b6675', { ls: 1.2 })}
+    ${T(16, 166, '54 %', 22, '#4ade80', { weight: 600 })}
+    ${T(100, 156, 'FRÉQUENCE', 6.5, '#5b6675', { ls: 1.2 })}
+    ${T(100, 166, '4.9 GHz', 14, '#e6edf3')}
+    ${T(184, 156, 'PUISSANCE', 6.5, '#5b6675', { ls: 1.2 })}
+    ${T(184, 166, '65 W', 14, '#e6edf3')}
+    ${T(256, 156, 'MOYENNE', 6.5, '#5b6675', { ls: 1.2 })}
+    ${T(256, 166, '58.2°', 14, '#e6edf3')}
+    ${bar(16, 204, 288, 6, .54, '#4ade80', '#16202a')}
+    ${T(16, 218, 'DERNIER RELEVÉ 21:47:32 · LHM', 6.5, '#3f4b59')}
+    ${V(320, 38, 190, '#131c26')}
+    ${T(398, 48, 'BASCULE VERS', 6.5, '#5b6675', { align: 'center', w: 110, ls: 1.1 })}
+    ${T(398, 58, 'GPU', 9, '#a78bfa', { align: 'center', w: 80, weight: 700, ls: 1.5 })}
+    ${SVG(0, 0, 480, 320, timerRing(398, 136, 54, 7, 10, '#f59e0b', '#1c2630'), '0 0 480 320')}
+    ${T(398, 116, '7', 32, '#f5f5f4', { align: 'center', w: 60 })}
+    ${T(398, 154, 'SECONDES', 6, '#5b6675', { align: 'center', w: 90, ls: 1 })}
+    ${T(398, 204, 'CYCLE 10 S', 6.5, '#5b6675', { align: 'center', w: 100 })}
+    ${R(16, 238, 448, 66, '#0d1219', '#1b2634')}
+    ${R(16, 238, 448, 2, '#a78bfa', '', 1, 'opacity:.55;')}
+    ${T(28, 248, 'GPU', 8, '#a78bfa', { weight: 700, ls: 1.2 })}
+    ${T(28, 260, GPU_NAME, 7, '#5b6675', { w: 200 })}
+    ${T(28, 272, '47.0<span style="font-size:9px;color:#5b6675"> °C</span>', 26, '#e6edf3')}
+    ${T(112, 270, 'CHARGE', 6.5, '#5b6675', { ls: 1 })}
+    ${T(112, 280, '28 %', 16, '#a78bfa', { weight: 600 })}
+    ${spark(gpuFocusHist, 240, 250, 208, 40, 40, 54, '#a78bfa', { avgLine: 46 })}
+    ${T(448, 292, '−48 S', 6, '#3f4b59', { align: 'right', w: 40, mono: true })}
+  </div>`;
+}
+/* ---------- galerie ---------- */
+const THEMES = [
+  {
+    id: '16', slug: 'thermo', title: 'Thermo', desc: 'Thermomètres à mercure, seuils 65 / 80 °C.',
+    build: build16, tags: ['2 COLONNES', 'SEUILS 65/80', 'SONDE PACKAGE'],
+    note: 'Deux colonnes identiques. Le tube est un rectangle + un ovale ; le mercure est découpé en bandes aux seuils, donc aucun dégradé. Le bulbe reprend la couleur du capteur.'
+  },
+  {
+    id: '17', slug: 'heatmap', title: 'Heatmap', desc: '48 secondes de température, une cellule par seconde.',
+    build: build17, tags: ['48 × 2 CELLULES', 'HISTORIQUE 48 S', 'ÉCHELLE THERMIQUE'],
+    note: '96 rectangles recolorés à chaque tick. Aucun historique supplémentaire : on réutilise htc/htg. Les deux températures actuelles restent lisibles au-dessus.'
+  },
+  {
+    id: '18', slug: 'spectrum', title: 'Spectre', desc: 'VU-mètre symétrique : hauteur = charge, couleur = température.',
+    build: build18, tags: ['VU-MÈTRE', 'CPU ↑ GPU ↓', '48 S'],
+    note: '96 barres fines. La hauteur lit hc/hg, la couleur lit htc/htg : deux informations dans le même pixel. Le CPU monte, le GPU descend depuis la ligne centrale.'
+  },
+  {
+    id: '19', slug: 'aiguilles', title: 'Aiguilles', desc: 'Deux compteurs à aiguille façon tableau de bord.',
+    build: build19, tags: ['JAUGES 240°', 'AIGUILLE', 'ZONES SEUIL'],
+    note: 'Les arcs sont des create_arc, l’aiguille une create_line repositionnée avec coords(). Cinq graduations, trois zones de seuil, valeur numérique et charge sous chaque cadran.'
+  },
+  {
+    id: '20', slug: 'analytics', title: 'Analytics', desc: 'Fiche de synthèse : actuel, moyenne, pic, tendance.',
+    build: build20, tags: ['5 MIN', 'MOY / PIC', 'SPARKLINE'],
+    note: 'Moyenne et pic calculés sur le deque existant (300 points = 5 min). La sparkline est une polyline + une aire en stipple ; les cartes tiennent sur deux lignes.'
+  },
+  {
+    id: '21', slug: 'focus', title: 'Focus', desc: 'Un seul capteur en vedette, avec bascule automatique.',
+    build: build21, tags: ['BASCULE 10 S', 'ANNEAU', 'MODE VEDETTE'],
+    note: 'Une grande valeur, l’autre capteur en bandeau. L’anneau est fait de 10 arcs ; le timer peut être piloté par after(). La bascule inverse simplement les deux blocs.'
+  }
+];
+
+function renderGallery() {
+  const gallery = document.getElementById('gallery');
+  const only = new URLSearchParams(location.search).get('only');
+  if (only) {
+    const t = THEMES.find(x => x.id === String(only));
+    if (t) {
+      document.documentElement.classList.add('solo');
+      document.body.classList.add('solo');
+      gallery.innerHTML = t.build();
+      return;
+    }
+  }
+  gallery.innerHTML = THEMES.map(t => `
+    <article class="card">
+      <div class="card-top">
+        <span class="num">${t.id}</span>
+        <div>
+          <h2>${t.title}</h2>
+          <p class="desc">${t.desc}</p>
+        </div>
+        <a class="png" href="${t.id}-${t.slug}.png">PNG</a>
+      </div>
+      <div class="shot">${t.build()}</div>
+      <div class="tags">${t.tags.map(x => `<span class="tag">${x}</span>`).join('')}</div>
+      <p class="note">${t.note}</p>
+    </article>`).join('');
+}
+renderGallery();
+</script>
+</body>
+</html>
