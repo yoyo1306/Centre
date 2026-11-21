@@ -16,17 +16,17 @@ Dézipper en gardant les dossiers côte à côte :
 CentreControle.exe
 _internal\
 ico.ico
-sensor_panel.exe
+Moniteur.exe
 panel_internal\
 sensor_panel.py
 config.ini
-assets\Fond.png
+assets\
 libs\
 themes\<thème>\preview.png
 ```
 
-`CentreControle.exe` reste avec `_internal`. `sensor_panel.exe` reste avec `panel_internal`. Les deux dossiers n’ont pas le même nom, sinon un exe écrase l’autre.
-Sans `centre.ini`, le centre cherche `sensor_panel.exe` dans son propre dossier.
+`CentreControle.exe` reste avec `_internal`. `Moniteur.exe` reste avec `panel_internal`. Les deux dossiers n’ont pas le même nom, sinon un exe écrase l’autre.
+Sans `centre.ini`, le centre cherche `Moniteur.exe` dans son propre dossier.
 Un second lancement ramène la fenêtre déjà ouverte au premier plan.
 
 Le panneau est lancé en administrateur (température CPU Ryzen via LibreHardwareMonitor).
@@ -36,20 +36,19 @@ Avec l’UAC sur « Ne jamais m’avertir », il n’y a pas de fenêtre de conf
 
 | Action | Effet |
 |---|---|
-| Clic sur une vignette | Prévisualise le thème sur le panneau. `config.ini` n’est pas modifié. |
-| Appliquer | Enregistre le thème prévisualisé et joue un son. |
+| Clic sur une vignette (au relâchement) | Sélectionne et prévisualise le thème sur le panneau. `config.ini` n’est pas modifié. |
+| Appliquer | Enregistre le thème prévisualisé et joue un son en deux temps (`click_down.wav` à l’appui, `click_up.wav` au relâchement). |
 | Fermer le centre | Remet le dernier thème enregistré si une prévisualisation était en cours. |
 | Arrêter | Arrête le panneau. |
 | Quitter | Ferme le centre. |
 | Clair / Sombre | Change l’apparence du centre. |
 | 0 à 5 | Règle la luminosité de l’écran 480×320. |
-| Options | Ouvre le panneau collé à la fenêtre. Un second clic le ferme. |
+| Options | Ouvre le panneau collé à la fenêtre (démarrage Windows, vitesse de mise à jour, recentrage, verrouillage et premier plan du moniteur 480×320). Un second clic le ferme. |
 | Flèches | Déplacent la sélection, sans l’appliquer. |
 | Entrée | Appliquer. |
 | Glisser la barre de titre | Déplace la fenêtre. La position est mémorisée dans `centre.ini`. |
-| Clic droit | Verrouiller, recentrer sur l’écran principal, quitter. |
 
-Le changement à chaud écrit la clé dans `theme_cmd.txt`. Le panneau l’applique au tick suivant (au plus une seconde) et supprime le fichier. Appliquer écrit aussi `theme =` dans `config.ini`.
+Tous les clics de l’interface sont déclenchés au relâchement du bouton sur le même élément. Le changement à chaud écrit la clé dans `theme_cmd.txt` (et les commandes live dans `panel_cmd.txt`). Le panneau les applique toutes les 250 ms environ et supprime les fichiers. Appliquer écrit aussi `theme =` dans `config.ini`.
 
 ## Luminosité
 
@@ -70,7 +69,7 @@ Options permet de lancer le panneau à l’ouverture de session Windows. La tâc
 
 ## Thèmes
 
-Treize thèmes. Les neuf premiers sont les thèmes verts d’origine. Les quatre suivants viennent des maquettes en couleurs :
+Vingt thèmes. Les huit premiers sont les thèmes verts d'origine. Les douze suivants viennent des maquettes en couleurs :
 
 | Clé | Nom |
 |---|---|
@@ -80,13 +79,20 @@ Treize thèmes. Les neuf premiers sont les thèmes verts d’origine. Les quatre
 | 04-tuiles | Tuiles 2x2 |
 | 05-colonnes | Colonnes segmentees |
 | 06-oscillo | Oscilloscope |
-| 07-double | Double peak |
 | 08-frise | Frise thermique |
 | 09-split | Compact splitscreen |
 | 10-modern | Modern Dark |
 | 11-ambre | Terminal Ambre |
 | 12-minimal | Minimal Mono |
 | 13-neon | Cyber Neon |
+| 14-flux | Flux système |
+| 15-atelier | Atelier |
+| 16-thermo | Thermo |
+| 17-heatmap | Heatmap |
+| 18-spectrum | Spectre |
+| 19-aiguilles | Aiguilles |
+| 20-analytics | Analytics |
+| 21-focus | Focus |
 
 Le centre lit les thèmes dans `sensor_panel.py`, avec exactement :
 
@@ -99,7 +105,7 @@ Quatre espaces avant `desc`. Une clé ne doit pas commencer par le numéro d’u
 
 Les vignettes sont des PNG 480×320 :
 
-- `themes\<clé>\preview.png` pour les treize thèmes
+- `themes\<clé>\preview.png` pour les vingt thèmes
 
 ## Sources
 
@@ -111,11 +117,14 @@ centre de controle\
     centre.ini              réglages locaux
     build.bat               recompile les deux exe
     sensor_panel.py         panneau et thèmes
-    sensor_panel.exe        exe du panneau, à côté de panel_internal
+    Moniteur.exe            exe du panneau, à côté de panel_internal
     config.ini              position, thème enregistré
     assets\Fond.png         fond des thèmes verts
+    assets\click_down.wav   son à l’appui sur Appliquer
+    assets\click_up.wav     son au relâchement sur Appliquer
     libs\                   LibreHardwareMonitor (température CPU)
     themes\                 vignettes du centre
+    CHANGELOG.md            historique des versions
 ```
 
 `_internal`, `panel_internal`, `build` et `dist` sont produits par PyInstaller. Ils ne sont pas dans le dépôt. Ils sont dans le zip de la release.

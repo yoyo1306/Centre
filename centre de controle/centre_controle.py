@@ -68,7 +68,7 @@ def fit_grid(n=None):
     global FOOT_Y, H
     FOOT_Y = PAGER_Y + PAGER_H + 8
     H = FOOT_Y + 62
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 SPEEDS = (
     ("high", "Élevé", 500),
     ("normal", "Normal", 1000),

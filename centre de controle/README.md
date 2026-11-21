@@ -20,7 +20,7 @@ Moniteur.exe
 panel_internal\
 sensor_panel.py
 config.ini
-assets\Fond.png
+assets\
 libs\
 themes\<thème>\preview.png
 ```
@@ -36,19 +36,19 @@ Avec l’UAC sur « Ne jamais m’avertir », il n’y a pas de fenêtre de conf
 
 | Action | Effet |
 |---|---|
-| Clic sur une vignette | Prévisualise le thème sur le panneau. `config.ini` n’est pas modifié. |
-| Appliquer | Enregistre le thème prévisualisé et joue un son. |
+| Clic sur une vignette (au relâchement) | Sélectionne et prévisualise le thème sur le panneau. `config.ini` n’est pas modifié. |
+| Appliquer | Enregistre le thème prévisualisé et joue un son en deux temps (`click_down.wav` à l’appui, `click_up.wav` au relâchement). |
 | Fermer le centre | Remet le dernier thème enregistré si une prévisualisation était en cours. |
 | Arrêter | Arrête le panneau. |
 | Quitter | Ferme le centre. |
 | Clair / Sombre | Change l’apparence du centre. |
 | 0 à 5 | Règle la luminosité de l’écran 480×320. |
-| Options | Ouvre le panneau collé à la fenêtre (démarrage, vitesse, moniteur, centre). Un second clic le ferme. |
+| Options | Ouvre le panneau collé à la fenêtre (démarrage Windows, vitesse de mise à jour, recentrage, verrouillage et premier plan du moniteur 480×320). Un second clic le ferme. |
 | Flèches | Déplacent la sélection, sans l’appliquer. |
 | Entrée | Appliquer. |
 | Glisser la barre de titre | Déplace la fenêtre. La position est mémorisée dans `centre.ini`. |
 
-Le changement à chaud écrit la clé dans `theme_cmd.txt`. Le panneau l’applique au tick suivant (au plus une seconde) et supprime le fichier. Appliquer écrit aussi `theme =` dans `config.ini`.
+Tous les clics de l’interface sont déclenchés au relâchement du bouton sur le même élément. Le changement à chaud écrit la clé dans `theme_cmd.txt` (et les commandes live dans `panel_cmd.txt`). Le panneau les applique toutes les 250 ms environ et supprime les fichiers. Appliquer écrit aussi `theme =` dans `config.ini`.
 
 ## Luminosité
 
@@ -117,11 +117,14 @@ centre de controle\
     centre.ini              réglages locaux
     build.bat               recompile les deux exe
     sensor_panel.py         panneau et thèmes
-    Moniteur.exe        exe du panneau, à côté de panel_internal
+    Moniteur.exe            exe du panneau, à côté de panel_internal
     config.ini              position, thème enregistré
     assets\Fond.png         fond des thèmes verts
+    assets\click_down.wav   son à l’appui sur Appliquer
+    assets\click_up.wav     son au relâchement sur Appliquer
     libs\                   LibreHardwareMonitor (température CPU)
     themes\                 vignettes du centre
+    CHANGELOG.md            historique des versions
 ```
 
 `_internal`, `panel_internal`, `build` et `dist` sont produits par PyInstaller. Ils ne sont pas dans le dépôt. Ils sont dans le zip de la release.
