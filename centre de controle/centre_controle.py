@@ -1308,63 +1308,54 @@ def hit(x, y, r):
     return r[0] <= x <= r[2] and r[1] <= y <= r[3]
 
 
-def on_press(e):
-    """Coord logiques : tout le traitement est fait en espace 480x320."""
-    lx, ly = e.x / SCALE, e.y / SCALE
+_pressed = None
+
+
+def _hit_target(lx, ly):
+    """Retourne le tuple cible sous (lx, ly) ou None."""
     if opt_open and not mini and hit(lx, ly, opt_box):
         for key, rect in opt_rects.items():
-            if not hit(lx, ly, rect):
-                continue
-            if key == "toggle":
-                toggle_startup()
-            elif key == "close":
-                close_options()
-            elif key.startswith("speed_"):
-                set_update_speed(key[6:])
-            elif key == "mon_center_small":
-                recenter_monitor()
-            elif key == "mon_lock":
-                toggle_panel_lock()
-            elif key == "mon_topmost":
-                toggle_panel_topmost()
-            return
-        return
-    on_options = (not mini) and ly <= TITLE_H and "options" in HDR and hit(lx, ly, HDR["options"])
-    if opt_open and not on_options:
-        close_options()
+            if hit(lx, ly, rect):
+                return ("opt", key)
+        return ("opt_bg", None)
     if ly <= TITLE_H:
         if mini:
-            toggle_mini()                      # clic titre en mode mini = rouvrir
-            return
+            return ("mini", None)
         for k, rect in HDR.items():
             if hit(lx, ly, rect):
-                if k == "options":
-                    show_options(e)
-                elif k == "theme_light":
-                    set_appearance("light")
-                elif k == "theme_dark":
-                    set_appearance("dark")
-                return
-        if locked and lx < W - 156:
-            drag["moving"] = True              # sans barre Windows, le titre déplace
-            drag["dx"], drag["dy"] = e.x, e.y
-        return
+                return ("hdr", k)
+        return None
     if mini:
-        return
+        return None
     for k, rect in BRIGHT.items():
         if hit(lx, ly, rect):
-            set_bright(int(k[1:]))
-            return
+            return ("bright", int(k[1:]))
     i = cell_at(lx, ly)
     if i is not None:
-        globals()["SELECTION"] = i
-        render()
-        preview_theme(SCHEMES[i])
-        return
+        return ("cell", i)
     for k, rect in BTN.items():
         if hit(lx, ly, rect):
-            act(k)
-            return
+            return ("btn", k)
+    return None
+
+
+def on_press(e):
+    """Coord logiques : memorise la cible pressee (action executee au relachement)."""
+    global _pressed
+    lx, ly = e.x / SCALE, e.y / SCALE
+    tgt = _hit_target(lx, ly)
+    on_opt_area = tgt is not None and tgt[0] in ("opt", "opt_bg")
+    on_opt_btn = tgt == ("hdr", "options")
+    if opt_open and not on_opt_area and not on_opt_btn:
+        close_options()
+        _pressed = tgt if (tgt is not None and tgt[0] == "hdr") else None
+        return
+    if tgt is None and not mini and ly <= TITLE_H and locked and lx < W - 156:
+        drag["moving"] = True              # sans barre Windows, le titre déplace
+        drag["dx"], drag["dy"] = e.x, e.y
+        _pressed = None
+        return
+    _pressed = tgt
 
 
 def on_motion(e):
@@ -1468,9 +1459,50 @@ def on_move(e):
 
 
 def on_release(e):
+    global _pressed
     if drag["moving"]:
         drag["moving"] = False
+        _pressed = None
         save_cfg()                            # memorise la nouvelle position
+        return
+    pressed = _pressed
+    _pressed = None
+    if not pressed:
+        return
+    lx, ly = e.x / SCALE, e.y / SCALE
+    if _hit_target(lx, ly) != pressed:
+        return
+    kind, val = pressed
+    if kind == "opt":
+        if val == "toggle":
+            toggle_startup()
+        elif val == "close":
+            close_options()
+        elif val.startswith("speed_"):
+            set_update_speed(val[6:])
+        elif val == "mon_center_small":
+            recenter_monitor()
+        elif val == "mon_lock":
+            toggle_panel_lock()
+        elif val == "mon_topmost":
+            toggle_panel_topmost()
+    elif kind == "mini":
+        toggle_mini()
+    elif kind == "hdr":
+        if val == "options":
+            show_options(e)
+        elif val == "theme_light":
+            set_appearance("light")
+        elif val == "theme_dark":
+            set_appearance("dark")
+    elif kind == "bright":
+        set_bright(val)
+    elif kind == "cell":
+        globals()["SELECTION"] = val
+        render()
+        preview_theme(SCHEMES[val])
+    elif kind == "btn":
+        act(val)
 
 
 def toggle_mini():
