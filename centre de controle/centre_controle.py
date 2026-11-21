@@ -1049,12 +1049,51 @@ def update_status():
         pass
 
 
-def play_apply_sound():
-    """Retour sonore quand Appliquer a enregistré le thème."""
+def _load_wav(name):
+    for base in (APPDIR, PANEL_DIR):
+        if not base:
+            continue
+        p = os.path.join(base, "assets", name)
+        if os.path.isfile(p):
+            try:
+                with open(p, "rb") as f:
+                    return f.read()
+            except Exception:
+                pass
+    return None
+
+
+_WAV_DOWN = None
+_WAV_UP = None
+_winmm = ctypes.windll.winmm
+_winmm.PlaySoundA.argtypes = [ctypes.c_char_p, wintypes.HMODULE, wintypes.DWORD]
+_winmm.PlaySoundA.restype = wintypes.BOOL
+
+
+def _init_sounds():
+    global _WAV_DOWN, _WAV_UP
+    _WAV_DOWN = _load_wav("click_down.wav")
+    _WAV_UP = _load_wav("click_up.wav")
+
+
+def play_click_down():
+    """Premier son au clic (enfoncement) sur Appliquer."""
     try:
-        if os.path.isfile(APPLY_WAV):
+        if _WAV_DOWN:
+            # SND_ASYNC | SND_NODEFAULT | SND_MEMORY = 0x0007
+            _winmm.PlaySoundA(_WAV_DOWN, None, 0x0007)
+    except Exception:
+        pass
+
+
+def play_apply_sound():
+    """Second son au relachement quand Appliquer a enregistré le thème."""
+    try:
+        if _WAV_UP:
+            _winmm.PlaySoundA(_WAV_UP, None, 0x0007)
+        elif os.path.isfile(APPLY_WAV):
             # SND_ASYNC | SND_NODEFAULT | SND_FILENAME
-            ctypes.windll.winmm.PlaySoundW(APPLY_WAV, None, 0x00020003)
+            _winmm.PlaySoundW(APPLY_WAV, None, 0x00020003)
     except Exception:
         pass
 
@@ -1356,6 +1395,8 @@ def on_press(e):
         _pressed = None
         return
     _pressed = tgt
+    if tgt == ("btn", "run"):
+        play_click_down()
 
 
 def on_motion(e):
@@ -1795,6 +1836,7 @@ root.bind("<KP_Enter>", on_key)
 root.bind("<Escape>", on_key)
 root.protocol("WM_DELETE_WINDOW", on_close)
 
+_init_sounds()
 panel_running()
 render()
 root.deiconify()
