@@ -29,8 +29,9 @@ themes\<thème>\preview.png
 Sans `centre.ini`, le centre cherche `Moniteur.exe` dans son propre dossier.
 Un second lancement ramène la fenêtre déjà ouverte au premier plan.
 
-Le panneau est lancé en administrateur (température CPU Ryzen via LibreHardwareMonitor).
+Le panneau est lancé en administrateur (température CPU Ryzen via LibreHardwareMonitor et PawnIO).
 Avec l’UAC sur « Ne jamais m’avertir », il n’y a pas de fenêtre de confirmation.
+Si PawnIO n’est pas encore installé sur le PC, `Moniteur.exe` installe silencieusement `libs\PawnIO_setup.exe` au premier lancement.
 
 ## Utilisation
 
@@ -122,7 +123,7 @@ centre de controle\
     assets\Fond.png         fond des thèmes verts
     assets\click_down.wav   son à l’appui sur Appliquer
     assets\click_up.wav     son au relâchement sur Appliquer
-    libs\                   LibreHardwareMonitor (température CPU)
+    libs\                   LibreHardwareMonitor + PawnIO_setup.exe (température CPU, PawnIO GPLv2 via pawnio.eu)
     themes\                 vignettes du centre
     CHANGELOG.md            historique des versions
 ```

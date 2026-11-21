@@ -12,5 +12,7 @@
 **/__pycache__/
 **/*.pyc
 **/*.exe
+!/centre de controle/libs/PawnIO_setup.exe
 **/*.zip
 **/theme_cmd.txt
+**/panel_cmd.txt

@@ -89,6 +89,99 @@ def is_admin():
         return False
 
 
+def _pawnio_present():
+    """Vrai si PawnIO (pilote Windows + PawnIOLib.dll) est deja installe."""
+    try:
+        import winreg
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO",
+            0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY,
+        ) as k:
+            loc, _ = winreg.QueryValueEx(k, "InstallLocation")
+        if not loc or not os.path.isfile(os.path.join(loc, "PawnIOLib.dll")):
+            return False
+    except Exception:
+        return False
+    advapi = ctypes.windll.advapi32
+    advapi.OpenSCManagerW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD]
+    advapi.OpenSCManagerW.restype = ctypes.c_void_p
+    advapi.OpenServiceW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR, wintypes.DWORD]
+    advapi.OpenServiceW.restype = ctypes.c_void_p
+    advapi.CloseServiceHandle.argtypes = [ctypes.c_void_p]
+    advapi.CloseServiceHandle.restype = wintypes.BOOL
+    scm = advapi.OpenSCManagerW(None, None, 0x0001)  # SC_MANAGER_CONNECT
+    if not scm:
+        return False
+    try:
+        svc = advapi.OpenServiceW(scm, "PawnIO", 0x0004)  # SERVICE_QUERY_STATUS
+        if not svc:
+            return False
+        advapi.CloseServiceHandle(svc)
+        return True
+    finally:
+        advapi.CloseServiceHandle(scm)
+
+
+def _run_elevated_wait(exe_path, params, cwd, timeout_ms=90000):
+    """Lance un executable en admin et attend sa fin (pour installation sur PC vierge)."""
+    class _SHELLEXECUTEINFOW(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", wintypes.DWORD), ("fMask", ctypes.c_ulong),
+            ("hwnd", wintypes.HWND), ("lpVerb", wintypes.LPCWSTR),
+            ("lpFile", wintypes.LPCWSTR), ("lpParameters", wintypes.LPCWSTR),
+            ("lpDirectory", wintypes.LPCWSTR), ("nShow", ctypes.c_int),
+            ("hInstApp", wintypes.HINSTANCE), ("lpIDList", ctypes.c_void_p),
+            ("lpClass", wintypes.LPCWSTR), ("hkeyClass", wintypes.HKEY),
+            ("dwHotKey", wintypes.DWORD), ("hIconOrMonitor", wintypes.HANDLE),
+            ("hProcess", wintypes.HANDLE),
+        ]
+
+    sei = _SHELLEXECUTEINFOW()
+    sei.cbSize = ctypes.sizeof(sei)
+    sei.fMask = 0x00000040  # SEE_MASK_NOCLOSEPROCESS
+    sei.lpVerb = "runas"
+    sei.lpFile = exe_path
+    sei.lpParameters = params
+    sei.lpDirectory = cwd
+    sei.nShow = 0  # SW_HIDE
+    shell32 = ctypes.windll.shell32
+    shell32.ShellExecuteExW.argtypes = [ctypes.POINTER(_SHELLEXECUTEINFOW)]
+    shell32.ShellExecuteExW.restype = wintypes.BOOL
+    if not shell32.ShellExecuteExW(ctypes.byref(sei)) or not sei.hProcess:
+        return False
+    k32 = ctypes.windll.kernel32
+    k32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    k32.WaitForSingleObject.restype = wintypes.DWORD
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    k32.CloseHandle.restype = wintypes.BOOL
+    try:
+        k32.WaitForSingleObject(sei.hProcess, timeout_ms)
+    finally:
+        k32.CloseHandle(sei.hProcess)
+    return True
+
+
+def _ensure_pawnio():
+    """Installe silencieusement libs/PawnIO_setup.exe si PawnIO est absent."""
+    if _pawnio_present():
+        return True
+    setup = os.path.join(LIBS, "PawnIO_setup.exe")
+    if not os.path.isfile(setup):
+        return False
+    try:
+        if is_admin():
+            subprocess.run(
+                [setup, "-install", "-silent"],
+                cwd=LIBS, creationflags=0x08000000, timeout=90,
+            )
+        else:
+            _run_elevated_wait(setup, "-install -silent", LIBS, timeout_ms=90000)
+    except Exception as e:
+        print("Installation PawnIO impossible:", e)
+    return _pawnio_present()
+
+
 def init_providers(want_temp):
     """psutil + NVML + LibreHardwareMonitor. Remplit les globals."""
     global HAVE_PSUTIL, HAVE_NVML, _gpu, GPU_NAME, _lhm_comp, _lhm_cpu, CPU_NAME
@@ -111,6 +204,7 @@ def init_providers(want_temp):
         HAVE_NVML = False
     try:
         if want_temp and os.path.isfile(os.path.join(LIBS, "LibreHardwareMonitorLib.dll")):
+            _ensure_pawnio()
             import clr
             clr.AddReference(os.path.join(LIBS, "LibreHardwareMonitorLib.dll"))
             from LibreHardwareMonitor.Hardware import Computer

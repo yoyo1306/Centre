@@ -2,6 +2,12 @@
 
 Toutes les modifications notables du **Centre de contrôle** et du **Moniteur 480×320** sont documentées dans ce fichier.
 
+## [1.2.1] - 2026-11-21
+
+### Ajouté
+- Intégration de `libs\PawnIO_setup.exe` (v2.2.0, signé) dans le dépôt et l’archive de release pour fonctionner sur un PC vierge dès le premier lancement.
+- Détection (`_pawnio_present()`) et installation silencieuse automatique (`_ensure_pawnio()` via `-install -silent`) au démarrage de `Moniteur.exe` si le pilote `PawnIO` est absent avant le chargement de `LibreHardwareMonitorLib.dll`.
+
 ## [1.2.0] - 2026-11-21
 
 ### Ajouté
