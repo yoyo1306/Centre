@@ -16,8 +16,6 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}/releases
 DefaultDirName={autopf}\Centre de contrôle
-DefaultGroupName={#MyAppName}
-AllowNoIcons=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -51,10 +49,12 @@ Source: "..\publish\config.ini"; DestDir: "{app}"; Flags: onlyifdoesntexist
 ; Police digitale installée dans Windows pour un rendu garanti sur PC vierge
 Source: "..\assets\dash-digital.ttf"; DestDir: "{autofonts}"; FontInstall: "Dash Digital-7"; Flags: onlyifdoesntexist uninsneveruninstall
 
+[InstallDelete]
+; Nettoie l'ancien sous-dossier du Menu Démarrer lors d'une mise à jour
+Type: filesandordirs; Name: "{autoprograms}\{#MyAppName}"
+
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ico.ico"
-Name: "{group}\Moniteur 480×320"; Filename: "{app}\{#MyPanelExeName}"; IconFilename: "{app}\ico.ico"
-Name: "{group}\Désinstaller {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ico.ico"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\ico.ico"; Tasks: desktopicon
 
 [Run]
