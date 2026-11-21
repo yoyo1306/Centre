@@ -1039,46 +1039,6 @@ class T06Oscillo(ThemeBase):
         stext_set(cv_, self.t_use_g, f"GPU · {s['gu']:.0f} %")
 
 
-class T07DoublePeak(ThemeBase):
-    """07 · Double peak : style 01-aida + barre de charge inline dans chaque entete."""
-    name = "07-double"
-    desc = "Double peak"
-
-    def build(self):
-        cv_, C = self.cv, self.C
-        self.g1, self.g2 = (0, 40, 479, 119), (0, 200, 479, 119)
-        for (x, y, w, h) in (self.g1, self.g2):
-            cv_.create_rectangle(x, y, x + w, y + h, outline=C["grid"], fill="")
-        self.sparks = []
-        for (x, y, w, h), key, col in ((self.g1, "cpu", C["graph"]), (self.g2, "gpu", C["graph2"])):
-            line = cv_.create_line(0, 0, 0, 0, fill=col, width=2)
-            self.sparks.append((x + 1, y + 1, w - 2, h - 2, key, line))
-        cv_.create_rectangle(252, 13, 344, 22, outline=C["grid"], fill="")
-        cv_.create_rectangle(252, 173, 344, 182, outline=C["grid"], fill="")
-        self.bar_c = cv_.create_rectangle(253, 14, 253, 21, outline="", fill=C["graph"])
-        self.bar_g = cv_.create_rectangle(253, 174, 253, 181, outline="", fill=C["graph2"])
-        self.t_name_c = self.T(10, 10, self.cpu_name, 15, C["label"], budget=232)
-        self.t_use_c = self.T(352, 11, "--%", 13, C["grid"], budget=50, sample="100%")
-        self.t_temp_c = self.T(474, 10, "--°C", 16, C["label"], anchor="ne",
-                               budget=70, sample="100°C")
-        self.t_name_g = self.T(10, 170, self.gpu_name, 15, C["label"], budget=232)
-        self.t_use_g = self.T(352, 171, "--%", 13, C["grid"], budget=50, sample="100%")
-        self.t_temp_g = self.T(474, 170, "--°C", 16, C["label"], anchor="ne",
-                               budget=70, sample="100°C")
-
-    def update(self, s):
-        cv_ = self.cv
-        for x, y, w, h, key, line in self.sparks:
-            hist = s["hc"] if key == "cpu" else s["hg"]
-            cv_.coords(line, *pts_line(hist, x, y, w, h))
-        cv_.coords(self.bar_c, 253, 14, 253 + 90 * s["cu"] / 100.0, 21)
-        cv_.coords(self.bar_g, 253, 174, 253 + 90 * s["gu"] / 100.0, 181)
-        stext_set(cv_, self.t_temp_c, temp_int(s["ct"]))
-        stext_set(cv_, self.t_temp_g, temp_int(s["gt"]))
-        stext_set(cv_, self.t_use_c, f"{s['cu']:.0f}%")
-        stext_set(cv_, self.t_use_g, f"{s['gu']:.0f}%")
-
-
 class T08Frise(ThemeBase):
     """08 · Frise thermique : barres verticales (1 s = 1 barre), hauteur + densite = temp."""
     name = "08-frise"
@@ -2214,7 +2174,7 @@ class T21Focus(ThemeBase):
 
 
 THEMES = [T01AidaPlus, T02Hud, T03Anneaux, T04Tuiles, T05Colonnes,
-          T06Oscillo, T07DoublePeak, T08Frise, T09Split,
+          T06Oscillo, T08Frise, T09Split,
           T10Modern, T11Ambre, T12Minimal, T13Neon, T14Flux, T15Atelier,
           T16Thermo, T17Heatmap, T18Spectrum, T19Aiguilles, T20Analytics, T21Focus]
 
@@ -2222,13 +2182,20 @@ THEMES = [T01AidaPlus, T02Hud, T03Anneaux, T04Tuiles, T05Colonnes,
 def resolve_theme(key):
     """'6', '06-oscillo', 'oscillo'... -> classe de theme (defaut : 01)."""
     k = str(key).strip().lower()
+    for t in THEMES:
+        if k and k == t.name.lower():
+            return t
     m = re.match(r"(\d+)", k)
     if m:
         i = int(m.group(1))
+        for t in THEMES:
+            tm = re.match(r"(\d+)", t.name)
+            if tm and int(tm.group(1)) == i:
+                return t
         if 1 <= i <= len(THEMES):
             return THEMES[i - 1]
     for t in THEMES:
-        if k and (k == t.name or k in t.name or k in t.desc.lower()):
+        if k and (k in t.name or k in t.desc.lower()):
             return t
     return THEMES[0]
 

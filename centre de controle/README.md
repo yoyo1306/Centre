@@ -69,7 +69,7 @@ Options permet de lancer le panneau à l’ouverture de session Windows. La tâc
 
 ## Thèmes
 
-Vingt et un thèmes. Les neuf premiers sont les thèmes verts d'origine. Les douze suivants viennent des maquettes en couleurs :
+Vingt thèmes. Les huit premiers sont les thèmes verts d'origine. Les douze suivants viennent des maquettes en couleurs :
 
 | Clé | Nom |
 |---|---|
@@ -79,7 +79,6 @@ Vingt et un thèmes. Les neuf premiers sont les thèmes verts d'origine. Les dou
 | 04-tuiles | Tuiles 2x2 |
 | 05-colonnes | Colonnes segmentees |
 | 06-oscillo | Oscilloscope |
-| 07-double | Double peak |
 | 08-frise | Frise thermique |
 | 09-split | Compact splitscreen |
 | 10-modern | Modern Dark |
@@ -106,7 +105,7 @@ Quatre espaces avant `desc`. Une clé ne doit pas commencer par le numéro d’u
 
 Les vignettes sont des PNG 480×320 :
 
-- `themes\<clé>\preview.png` pour les vingt et un thèmes
+- `themes\<clé>\preview.png` pour les vingt thèmes
 
 ## Sources
 
