@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="CentreControle.Core/CentreControle.Core.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="CentreControle.Monitor/CentreControle.Monitor.csproj">
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="CentreControle.App/CentreControle.App.csproj">
+    <Platform Project="x64" />
+  </Project>
+</Solution>

@@ -2,6 +2,19 @@
 
 Toutes les modifications notables du **Centre de contrôle** et du **Moniteur 480×320** sont documentées dans ce fichier.
 
+## [2.0.0] - 2026-11-21
+
+### Ajouté
+- **Réécriture complète en C# (.NET 10) — zéro dépendance Python** :
+  - **Centre de contrôle (`CentreControle.App`) en WinUI 3** : DA Windows 11 native (Mica, barre de titre personnalisée, coins arrondis, thème Clair/Sombre, filtres de thèmes Tous/Verts/Couleurs, son en deux temps sur Appliquer, tiroir Options style Paramètres Windows 11 avec état PawnIO).
+  - **Moniteur 480×320 (`CentreControle.Monitor`) natif C#** : les 20 thèmes portés en rendu GDI+ double-buffered anti-aliasé, appel direct à `LibreHardwareMonitorLib` 0.9.6 (sans `pythonnet`), NVML natif (`nvml.dll`) + repli `nvidia-smi`, police `assets\dash-digital.ttf` embarquée, et communication live instantanée par Named Pipe (`CentreControlePanelPipe`) avec repli fichiers.
+  - **Installateur Windows 11 (`installer\CentreControle.iss` via Inno Setup 6)** : `CentreControle-Setup-2.0.0.exe` self-contained (aucun prérequis Python/.NET/Windows App SDK sur un PC vierge), installation dans `Program Files`, raccourcis, désinstallation propre, police `Dash Digital-7`, et installation silencieuse automatique de `PawnIO_setup.exe` si absent.
+- Gestion automatique du dossier de données (`AppPaths.ResolveDataDir`) : mode portable si le dossier est inscriptible, ou `%ProgramData%\CentreControle\` partagé lorsqu’installé dans `Program Files`.
+- Script de build automatisé [build.ps1](build.ps1) et solution [src/CentreControle.slnx](src/CentreControle.slnx).
+
+### Modifié
+- Anciens scripts Python (`centre_controle.py`, `sensor_panel.py`, `build.bat`, `requirements.txt`) archivés dans `legacy\`.
+
 ## [1.2.1] - 2026-11-21
 
 ### Ajouté

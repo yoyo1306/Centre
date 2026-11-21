@@ -7,6 +7,9 @@
 
 **/_internal/
 **/panel_internal/
+**/bin/
+**/obj/
+**/publish/
 **/build/
 **/dist/
 **/__pycache__/
